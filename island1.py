@@ -3,6 +3,7 @@ import os
 import sys
 from start_screen import start_screen
 from sea_travel import *
+from qt_window import *
 
 FPS = 50
 tiles_group = pygame.sprite.Group()
@@ -30,17 +31,23 @@ class Tile(pygame.sprite.Sprite):
             tile_width * pos_x, tile_height * pos_y)
 
 
+class House(pygame.sprite.Sprite):
+    def __init__(self, tile_type, pos_x, pos_y):
+        super().__init__(house_group, all_sprites)
+        self.image = tile_images[tile_type]
+        self.rect = self.image.get_rect().move(
+            tile_width * pos_x, tile_height * pos_y)
+
+
 class Player(pygame.sprite.Sprite):
     def __init__(self, pos_x, pos_y):
         super().__init__(player_group, all_sprites)
         self.image = player_image
         self.rect = self.image.get_rect().move(
-            tile_width * pos_x, tile_height * pos_y)
+            tile_width * pos_x + 10, tile_height * pos_y)
 
     def update(self):
-        if not pygame.sprite.spritecollideany(self, tiles_group):
-            return True
-
+        return pygame.sprite.spritecollideany(self, house_group)
 
 
 def generate_level(level):
@@ -49,10 +56,10 @@ def generate_level(level):
         for x in range(len(level[y])):
             if level[y][x] == '=':
                 Tile('road', x, y)
-            elif level[y][x] == '.':
-                Tile('house', x, y)
+            elif level[y][x] == 'o':
+                House('house', x, y)
             elif level[y][x] == '@':
-                Tile('empty', x, y)
+                Tile('road', x, y)
                 new_player = Player(x, y)
     return new_player, x, y
 
@@ -88,11 +95,11 @@ start_screen()
 sea_travel()
 
 tile_images = {
-    'road': load_image('road.jpg'),
-    'house': load_image('house.jpg'),
+    'road': load_image('road.png'),
+    'house': load_image('house.png'),
     'empty': load_image('sea_tile.png')
 }
-player_image = load_image('player.jpg')
+player_image = load_image('player.png')
 
 tile_width = tile_height = 50
 
@@ -100,6 +107,7 @@ player = None
 
 all_sprites = pygame.sprite.Group()
 player_group = pygame.sprite.Group()
+house_group = pygame.sprite.Group()
 
 x, y = tile_width * 3, tile_height * 2
 
@@ -115,21 +123,31 @@ while running:
         if event.type == pygame.QUIT:
             running = False
         if event.type == pygame.KEYDOWN:
-            if player.update():
-                if event.key == pygame.K_LEFT:
+            if event.key == pygame.K_LEFT:
+                player.rect.x -= 50
+                if player.update() is not None:
                     player.rect.x += 50
-                if event.key == pygame.K_RIGHT:
+            if event.key == pygame.K_RIGHT:
+                player.rect.x += 50
+                if player.update() is not None:
                     player.rect.x -= 50
-                if event.key == pygame.K_UP:
+            if event.key == pygame.K_UP:
+                player.rect.y -= 50
+                if player.update() is not None:
                     player.rect.y += 50
-                if event.key == pygame.K_DOWN:
+            if event.key == pygame.K_DOWN:
+                player.rect.y += 50
+                if player.update() is not None:
                     player.rect.y -= 50
+    if player.rect.x == 237 and player.rect.y == 276:
+        main()
 
     camera.update(player)
     for sprite in all_sprites:
         camera.apply(sprite)
 
-    screen.fill(pygame.Color("yellow"))
+    screen.fill(pygame.Color("black"))
+    house_group.draw(screen)
     tiles_group.draw(screen)
     player_group.draw(screen)
     font = pygame.font.Font(None, 15)
