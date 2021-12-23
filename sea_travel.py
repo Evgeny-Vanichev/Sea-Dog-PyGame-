@@ -1,7 +1,6 @@
 import pygame
 import os
 import sys
-from start_screen import start_screen
 
 FPS = 50
 
@@ -58,6 +57,7 @@ def load_level(filename):
 def terminate():
     pygame.quit()
     sys.exit()
+
 
 def sea_travel():
     global all_sprites
