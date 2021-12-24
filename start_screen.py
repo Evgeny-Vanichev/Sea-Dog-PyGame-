@@ -44,8 +44,8 @@ def start_screen():
                 terminate()
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if 105 <= event.pos[0] <= 405 and 300 <= event.pos[1] <= 350:
-                    # ex.show() THIS CODE WORKS!!!
-                    # app.exec() THIS CODE WORKS!!!
+                    ex.show()  # THIS CODE WORKS!!!
+                    app.exec()  # THIS CODE WORKS!!!
                     return
         pygame.display.flip()
         clock.tick(FPS)
