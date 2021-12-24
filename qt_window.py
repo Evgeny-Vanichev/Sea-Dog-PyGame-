@@ -12,7 +12,7 @@ class Main(QWidget):
         self.initUI()
 
     def initUI(self):
-        self.setGeometry(300, 100, *SCREEN_SIZE)
+        self.setGeometry(432, 134, *SCREEN_SIZE)
         self.setWindowTitle('Задание')
 
         self.pixmap = QPixmap('data/pirate.jpg')
