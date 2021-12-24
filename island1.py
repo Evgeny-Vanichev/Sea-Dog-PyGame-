@@ -3,7 +3,6 @@ import os
 import sys
 from start_screen import start_screen
 from sea_travel import *
-from qt_window import *
 
 FPS = 50
 tiles_group = pygame.sprite.Group()
@@ -139,8 +138,6 @@ while running:
                 player.rect.y += 50
                 if player.update() is not None:
                     player.rect.y -= 50
-    if player.rect.x == 237 and player.rect.y == 276:
-        main()
 
     camera.update(player)
     for sprite in all_sprites:
