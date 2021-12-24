@@ -15,11 +15,27 @@ class Login(QMainWindow, Ui_MainWindow):
         result = cur.execute("SELECT * FROM users WHERE name=?",
                              (self.lineEdit.text(),)).fetchall()
         if not result:
-            cur.execute('INSERT INTO users(score, name, level) VALUES(0,?,0)',
+            cur.execute('INSERT INTO users(name, level, score) VALUES(?,0,0)',
                         (self.lineEdit.text(),))
+            name_id = cur.execute('SELECT id FROM users WHERE name=?',
+                        (self.lineEdit.text(),)).fetchone()
+            cur.execute('INSERT INTO passwords(id, password) VALUES(?,?)',
+                        (name_id[0], self.lineEdit_2.text()))
+            x = cur.execute('SELECT * FROM passwords WHERE id=?',
+                            (name_id[0],)).fetchall()
+            print(x)
             con.commit()
+            self.close()
         else:
-            cur.execute('UPDATE users SET score=0, level=0 WHERE name=?',
-                        (self.lineEdit.text(),))
-            con.commit()
-        self.close()
+            password = cur.execute('SELECT password FROM passwords '
+                                   'WHERE id=('
+                                   'SELECT id FROM users '
+                                   'WHERE name = ?)',
+                                   (self.lineEdit.text(),)).fetchone()
+            if str(password[0]) == self.lineEdit_2.text():
+                cur.execute('UPDATE users SET score=0, level=0 WHERE name=?',
+                            (self.lineEdit.text(),))
+                con.commit()
+                self.close()
+            else:
+                self.label_3.setText("Неправильный пароль")
