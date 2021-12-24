@@ -1,6 +1,7 @@
 import pygame
 import os
 import sys
+from login import *
 
 FPS = 50
 
@@ -25,7 +26,6 @@ def terminate():
 
 def start_screen():
     clock = pygame.time.Clock()
-    intro_text = ["'тут будет название'", ""]
 
     fon = pygame.transform.scale(load_image('background.jpg'), (663, 520))
     screen.blit(fon, (0, 0))
@@ -35,14 +35,17 @@ def start_screen():
     text_x = 180
     text_y = 315
     screen.blit(text, (text_x, text_y))
+    app = QApplication(sys.argv)
+    ex = Login()
 
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 terminate()
             if event.type == pygame.MOUSEBUTTONDOWN:
-                x, y = event.pos
-                if 105 <= x <= 405 and 300 <= y <= 350:
+                if 105 <= event.pos[0] <= 405 and 300 <= event.pos[1] <= 350:
+                    # ex.show() THIS CODE WORKS!!!
+                    # app.exec() THIS CODE WORKS!!!
                     return
         pygame.display.flip()
         clock.tick(FPS)
