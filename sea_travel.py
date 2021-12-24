@@ -109,8 +109,10 @@ def sea_travel():
                 if x >= 500 and y >= 500:
                     return
             if x == -100 and y == 50:
-                main()
-
+                app = QApplication(sys.argv)
+                ex = Main()
+                ex.show()
+                app.exec()
 
         screen.fill((0, 0, 0))
         tiles_group.draw(screen)
