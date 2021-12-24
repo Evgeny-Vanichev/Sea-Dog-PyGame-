@@ -1,6 +1,7 @@
 import pygame
 import os
 import sys
+from qt_window import *
 
 FPS = 50
 
@@ -107,6 +108,9 @@ def sea_travel():
                     y += 50
                 if x >= 500 and y >= 500:
                     return
+            if x == -100 and y == 50:
+                main()
+
 
         screen.fill((0, 0, 0))
         tiles_group.draw(screen)
