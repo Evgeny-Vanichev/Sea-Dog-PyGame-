@@ -1,9 +1,24 @@
 import pygame
 import os
 import sys
-from qt_window import *
+from pirate_test_window import *
 
 FPS = 50
+size = width, height = 500, 500
+
+
+class Camera:
+    def __init__(self):
+        self.dx = 0
+        self.dy = 0
+
+    def apply(self, obj):
+        obj.rect.x += self.dx
+        obj.rect.y += self.dy
+
+    def update(self, target):
+        self.dx = -(target.rect.x + target.rect.w // 2 - width // 2)
+        self.dy = -(target.rect.y + target.rect.h // 2 - height // 2)
 
 
 class Tile(pygame.sprite.Sprite):
@@ -28,8 +43,10 @@ def generate_level(level):
         for x in range(len(level[y])):
             if level[y][x] == '.':
                 Tile('empty', x, y)
-            elif level[y][x] == '#':
-                Tile('rock', x, y)
+            elif level[y][x] == 'x':
+                Tile('pirate', x, y)
+            elif level[y][x] == 'o':
+                Tile('island', x, y)
             elif level[y][x] == '@':
                 Tile('empty', x, y)
                 new_player = Player(x, y)
@@ -72,10 +89,12 @@ def sea_travel():
     pygame.init()
     size = width, height = 500, 500
     screen = pygame.display.set_mode(size)
+    screen.fill((153, 217, 234))
 
     tile_images = {
-        'rock': load_image('sea_tile.png'),
-        'empty': load_image('sea_tile.png')
+        'pirate': load_image('pirate_flag.jpg'),
+        'empty': load_image('sea_tile.png'),
+        'island': load_image('road.png')
     }
     player_image = load_image('ship.png')
 
@@ -91,6 +110,8 @@ def sea_travel():
 
     player, level_x, level_y = generate_level(load_level('map.txt'))
 
+    camera = Camera()
+
     running = True
     while running:
         for event in pygame.event.get():
@@ -100,21 +121,30 @@ def sea_travel():
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_LEFT:
                     x -= 50
+                    player.rect.x -= 50
                 if event.key == pygame.K_RIGHT:
                     x += 50
+                    player.rect.x += 50
                 if event.key == pygame.K_UP:
                     y -= 50
+                    player.rect.y -= 50
                 if event.key == pygame.K_DOWN:
                     y += 50
+                    player.rect.y += 50
                 if x >= 500 and y >= 500:
                     return
-            if x == -100 and y == 50:
+
+            if x == -100 and y == 100:
                 app = QApplication(sys.argv)
                 ex = Main()
                 ex.show()
                 app.exec()
 
-        screen.fill((0, 0, 0))
+        camera.update(player)
+        for sprite in all_sprites:
+            camera.apply(sprite)
+
+        screen.fill((153, 217, 234))
         tiles_group.draw(screen)
         player_group.draw(screen)
         font = pygame.font.Font(None, 15)
