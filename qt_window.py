@@ -1,6 +1,5 @@
-from PyQt5.QtWidgets import QWidget, QApplication, QInputDialog, QLabel, QPushButton
-from PyQt5.QtGui import QPixmap, QFont
-from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QWidget
+from pirate_test import *
 import sys
 
 SCREEN_SIZE = [500, 500]
@@ -33,11 +32,8 @@ class Main(QWidget):
         self.test_btn.clicked.connect(self.click)
 
     def click(self):
-        pass
-
-
-def main():
-    app = QApplication(sys.argv)
-    ex = Main()
-    ex.show()
-    sys.exit(app.exec())
+        app = QApplication(sys.argv)
+        test = Test()
+        test.show()
+        app.exec()
+        self.close()
