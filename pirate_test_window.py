@@ -1,4 +1,5 @@
-from PyQt5.QtWidgets import QWidget
+from PyQt5.QtWidgets import QWidget, QApplication, QPushButton, QLabel
+from PyQt5.QtGui import QPixmap, QFont
 from pirate_test import *
 import sys
 
@@ -32,8 +33,5 @@ class Main(QWidget):
         self.test_btn.clicked.connect(self.click)
 
     def click(self):
-        app = QApplication(sys.argv)
-        test = Test()
-        test.show()
-        app.exec()
-        self.close()
+        self.test = Test()
+        self.test.show()
