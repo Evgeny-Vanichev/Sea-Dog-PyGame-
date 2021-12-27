@@ -1,8 +1,6 @@
 import pygame
 import os
 import sys
-from start_screen import start_screen
-from sea_travel import *
 
 FPS = 50
 tiles_group = pygame.sprite.Group()
@@ -96,6 +94,8 @@ def island():
     global tile_width
     global tile_height
     global player_image
+    global width
+    global height
 
     pygame.init()
     size = width, height = 500, 500
