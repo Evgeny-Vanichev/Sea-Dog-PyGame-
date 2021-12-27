@@ -1,13 +1,10 @@
 import pygame
+from PyQt5.QtWidgets import QApplication
 import os
 import sys
 from login import *
 
 FPS = 50
-
-pygame.init()
-size = width, height = 500, 500
-screen = pygame.display.set_mode(size)
 
 
 def load_image(name, colorkey=None):
@@ -25,6 +22,13 @@ def terminate():
 
 
 def start_screen():
+    global size
+    global screen
+
+    pygame.init()
+    size = width, height = 500, 500
+    screen = pygame.display.set_mode(size)
+
     clock = pygame.time.Clock()
 
     fon = pygame.transform.scale(load_image('background.jpg'), (663, 520))
@@ -36,7 +40,7 @@ def start_screen():
     text_y = 315
     screen.blit(text, (text_x, text_y))
     app = QApplication(sys.argv)
-    ex = Login()
+    login = Login()
 
     while True:
         for event in pygame.event.get():
@@ -44,11 +48,8 @@ def start_screen():
                 terminate()
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if 105 <= event.pos[0] <= 405 and 300 <= event.pos[1] <= 350:
-                    ex.show()  # THIS CODE WORKS!!!
+                    login.show()  # THIS CODE WORKS!!!
                     app.exec()  # THIS CODE WORKS!!!
                     return
         pygame.display.flip()
         clock.tick(FPS)
-
-
-start_screen()
