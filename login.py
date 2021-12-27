@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QMainWindow, QApplication
+from PyQt5.QtWidgets import QMainWindow
 import sqlite3
 from login_ui import Ui_MainWindow
 
