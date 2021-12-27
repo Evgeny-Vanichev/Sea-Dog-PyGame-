@@ -1,6 +1,8 @@
 from PyQt5.QtWidgets import QMainWindow
 from pirate_test_ui import Ui_MainWindow
 from questions import *
+from game_over import *
+from sea_travel import *
 
 
 class Test(QMainWindow, Ui_MainWindow):
@@ -18,10 +20,12 @@ class Test(QMainWindow, Ui_MainWindow):
             self.count += 1
             if self.count == 5:
                 self.close()
+                sea_travel()
             self.label_2.setText(questions[self.count + 1][0])
             self.radioButton.setText(questions[self.count + 1][1][0])
             self.radioButton_2.setText(questions[self.count + 1][2][0])
             self.radioButton_3.setText(questions[self.count + 1][3][0])
             self.radioButton_4.setText(questions[self.count + 1][4][0])
         else:
-            pass
+            self.close()
+            game_over()
