@@ -33,6 +33,13 @@ def start_screen():
 
     fon = pygame.transform.scale(load_image('background.jpg'), (663, 520))
     screen.blit(fon, (0, 0))
+    font = pygame.font.Font(None, 70)
+    name = font.render("Игра <<Sea Dog>>", True, (10, 20, 80))
+    name_x = 90
+    name_y = 50
+    screen.blit(name, (name_x, name_y))
+    image = load_image("big_player.png")
+    screen.blit(image, (100, 100))
     font = pygame.font.Font(None, 30)
     pygame.draw.rect(screen, pygame.Color(50, 50, 230), (105, 300, 300, 50), 0)
     text = font.render("Start the game!", True, (173, 216, 230))
