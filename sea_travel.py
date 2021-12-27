@@ -1,6 +1,5 @@
 import pygame
 import os
-import sys
 from pirate_test_window import *
 
 FPS = 50
@@ -87,7 +86,6 @@ def sea_travel():
     global player_image
 
     pygame.init()
-    size = width, height = 500, 500
     screen = pygame.display.set_mode(size)
     screen.fill((153, 217, 234))
 
@@ -136,8 +134,8 @@ def sea_travel():
 
             if x == -100 and y == 100:
                 app = QApplication(sys.argv)
-                ex = Main()
-                ex.show()
+                test = Main()
+                test.show()
                 app.exec()
 
         camera.update(player)
