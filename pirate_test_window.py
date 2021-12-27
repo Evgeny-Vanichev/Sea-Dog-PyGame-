@@ -35,3 +35,4 @@ class Main(QWidget):
     def click(self):
         self.test = Test()
         self.test.show()
+        self.close()
