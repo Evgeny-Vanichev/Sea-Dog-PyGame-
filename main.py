@@ -6,6 +6,7 @@ from island1 import *
 def main():
     start_screen()
     sea_travel()
+    sea_travel()
     island()
 
 
