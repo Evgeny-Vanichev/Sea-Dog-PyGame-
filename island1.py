@@ -1,6 +1,7 @@
 import pygame
 import os
 import sys
+from win_game import *
 
 FPS = 50
 tiles_group = pygame.sprite.Group()
@@ -116,7 +117,7 @@ def island():
     player_group = pygame.sprite.Group()
     house_group = pygame.sprite.Group()
 
-    x, y = tile_width * 3, tile_height * 2
+    x, y = 100, 100
 
     player, level_x, level_y = generate_level(load_level('island_map.txt'))
 
@@ -132,20 +133,31 @@ def island():
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_LEFT:
                     player.rect.x -= 50
+                    x -= 50
                     if player.update() is not None:
+                        x += 50
                         player.rect.x += 50
                 if event.key == pygame.K_RIGHT:
+                    x += 50
                     player.rect.x += 50
                     if player.update() is not None:
+                        x -= 50
                         player.rect.x -= 50
                 if event.key == pygame.K_UP:
+                    y -= 50
                     player.rect.y -= 50
                     if player.update() is not None:
+                        y += 50
                         player.rect.y += 50
                 if event.key == pygame.K_DOWN:
+                    y += 50
                     player.rect.y += 50
                     if player.update() is not None:
+                        y -= 50
                         player.rect.y -= 50
+            if x == 250 and y == 850:
+                win_game()
+                return
 
         camera.update(player)
         for sprite in all_sprites:
