@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import QMainWindow
 from pirate_test_ui import Ui_MainWindow
 from questions import *
 from game_over import *
-from sea_travel import *
+from level_completed import *
 
 
 class Test(QMainWindow, Ui_MainWindow):
@@ -20,7 +20,9 @@ class Test(QMainWindow, Ui_MainWindow):
             self.count += 1
             if self.count == 5:
                 self.close()
-                sea_travel()
+                level_completed()
+                return
+            self.label.setText(f'Вопрос №{self.count}')
             self.label_2.setText(questions[self.count + 1][0])
             self.radioButton.setText(questions[self.count + 1][1][0])
             self.radioButton_2.setText(questions[self.count + 1][2][0])
