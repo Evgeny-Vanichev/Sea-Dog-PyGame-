@@ -129,7 +129,7 @@ def sea_travel():
                 if event.key == pygame.K_DOWN:
                     y += 50
                     player.rect.y += 50
-                if x >= 500 and y >= 500:
+                if x == 500 and y == 500:
                     return
 
             if x == -100 and y == 100:
@@ -137,6 +137,7 @@ def sea_travel():
                 test = Main()
                 test.show()
                 app.exec()
+                return
 
         camera.update(player)
         for sprite in all_sprites:
