@@ -35,7 +35,7 @@ def start_screen():
     screen.blit(fon, (0, 0))
     font = pygame.font.Font(None, 70)
     name = font.render("Игра <<Sea Dog>>", True, (10, 20, 80))
-    name_x = 90
+    name_x = 40
     name_y = 50
     screen.blit(name, (name_x, name_y))
     image = load_image("big_player.png")
