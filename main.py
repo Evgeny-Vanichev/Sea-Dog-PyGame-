@@ -1,12 +1,13 @@
 from start_screen import *
-from sea_travel import *
+from sea_travel_level_1 import *
+from sea_travel_level_2 import *
 from island1 import *
 
 
 def main():
     start_screen()
-    sea_travel()
-    sea_travel()
+    sea_travel_level_1()
+    sea_travel_level_2()
     island()
 
 
