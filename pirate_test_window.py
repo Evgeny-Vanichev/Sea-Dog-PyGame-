@@ -33,6 +33,8 @@ class Main(QWidget):
         self.test_btn.clicked.connect(self.click)
 
     def click(self):
-        self.test = Test()
-        self.test.show()
         self.close()
+        self.application = thorpy.Application(size=(500, 500), caption="Guess the number")
+        self.test = PirateTest(0)
+        self.test.launch_game()
+        self.application.quit()
