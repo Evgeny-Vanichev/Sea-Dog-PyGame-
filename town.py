@@ -1,11 +1,11 @@
 import csv
+import os
 import random
 import sqlite3
+import sys
 
 import pygame
 import thorpy
-import sys
-import os
 
 FPS = 50
 
@@ -55,21 +55,24 @@ def start_screen():
 
 
 def load_items():
-    global current_city, money
-    with open(f'data/{current_player}.txt', mode='rt', encoding='utf-8') as file:
+    global current_city, inventory
+    with open(f'data/{current_player}/inventory.csv', mode='rt', encoding='utf8') as csvfile:
+        reader = csv.reader(csvfile, delimiter=';', quotechar='"')
+        for line in reader:
+            inventory[line[0]] = int(line[1])
+    with open(f'data/{current_player}/progress.txt', mode='rt', encoding='utf8') as file:
         current_city = file.readline().strip('\n')
-        money = int(file.readline().strip('\n'))
 
 
 def save_items():
     global money
-    with open('data/inventory.csv', mode='wt', encoding='utf8', newline='') as csvfile:
+    with open(f'data/{current_player}/inventory.csv', mode='wt', encoding='utf8',
+              newline='') as csvfile:
         writer = csv.writer(csvfile, delimiter=';', quotechar='"')
-        for line in inventory:
-            writer.writerow(line)
-    with open(f'data/{current_player}.txt', mode='wt', encoding='utf-8') as file:
-        file.write(current_city + '\n')
-        file.write(str(money))
+        for key, value in inventory.items():
+            writer.writerow([key, value])
+    with open(f'data/{current_player}/progress.txt', mode='wt', encoding='utf8') as file:
+        file.write(current_city)
 
 
 def terminate():
@@ -108,7 +111,7 @@ def load_level(filename):
     return list(map(lambda x: x.ljust(max_width, '.'), level_map))
 
 
-def generate_level(level, city):
+def generate_level(level):
     new_player, x, y = None, None, None
     player_x, player_y = None, None
     for y in range(len(level)):
@@ -119,20 +122,24 @@ def generate_level(level, city):
             elif level[y][x] == '@':
                 player_x, player_y = x, y
             elif level[y][x] in '123456789':
-                create_npc(level[y][x], x, y, city)
+                create_npc(level[y][x], x, y)
     new_player = Player(player_x, player_y)
     # вернем игрока, а также размер поля в клетках
     return new_player, x, y
 
 
-def create_npc(number, x, y, city):
+def create_npc(number, x, y):
     """NPC(level[y][x], x, y)"""
     con = sqlite3.connect("data/npc/npc.db")
     npc_type = con.cursor().execute(
         f"""SELECT function FROM functions
             WHERE id == {number}""").fetchone()[0]
     if npc_type == 'merchant':
-        Merchant(number, npc_type, x, y, city)
+        Merchant(number, x, y)
+    elif npc_type == 'buyer':
+        Buyer(number, x, y)
+    else:
+        NPC(number, npc_type, x, y)
 
 
 class Tile(pygame.sprite.Sprite):
@@ -216,21 +223,42 @@ def create_button(text, func, surface, size=(80, 30), align=('right', 0.1)):
     else:
         x = WIDTH * 0.25
     button.set_center((x, HEIGHT * align[1] + size[1] // 2))
+    button.blit()
+    button.update()
 
     return button
 
 
+def create_box(elements):
+    box = thorpy.Box(elements)
+    box.set_size((WIDTH * 0.75, 40))
+    box.set_main_color((255, 220, 130, 120))
+    return box
+
+
+def get_good_info(good):
+    con = sqlite3.connect(f"data/{current_city}/price_list.db")
+    result = con.cursor().execute(
+        f"""SELECT * FROM goods
+            WHERE name == '{good}'""").fetchall()
+    if not result:
+        return ["Ничего", "1шт", "0"]
+    return [str(x) for x in list(*result)]
+
+
 class NPC(pygame.sprite.Sprite):
-    def __init__(self, npc_number, npc_type, pos_x, pos_y, city):
+    def __init__(self, npc_number, npc_type, pos_x, pos_y):
         super().__init__(all_sprites, Npc_group)
         self.flag = True
-        self.pos_x, self.pos_y = pos_x, pos_y
+        self.number = npc_number
         self.npc_type = npc_type
-        self.city = city
+        self.pos_x, self.pos_y = pos_x, pos_y
         self.image = load_image(f'npc/npc{npc_number}.png')
         self.rect = self.image.get_rect().move(
             tile_width * pos_x + (50 - self.image.get_width()) // 2,
             tile_height * pos_y + (50 - self.image.get_height()) // 2)
+        self.text_ok = "ОК"
+        self.text_bye = "Пока"
 
     def get_line(self):
         filename = f"data/npc/{self.npc_type}.txt"
@@ -239,8 +267,6 @@ class NPC(pygame.sprite.Sprite):
             lines = [line.strip() for line in mapFile]
         return random.choice(lines)
 
-
-class Merchant(NPC):
     def intro_dialog(self):
         self.flag = True
         line = self.get_line()
@@ -252,13 +278,8 @@ class Merchant(NPC):
         text_y = HEIGHT * 0.1
         screen2.blit(text, (text_x, text_y))
 
-        btn_open = create_button('Магазин', self.open_shop, screen2, align=('left', 0.4))
-        btn_open.blit()
-        btn_open.update()
-
-        btn_quit = create_button("Пока", self.finish_dialog, screen2, align=('right', 0.4))
-        btn_quit.blit()
-        btn_quit.update()
+        btn_open = create_button(self.text_ok, self.special_function, screen2, align=('left', 0.4))
+        btn_quit = create_button(self.text_bye, self.finish_dialog, screen2, align=('right', 0.4))
 
         screen.blit(screen2, (0, 0))
         while self.flag:
@@ -271,54 +292,72 @@ class Merchant(NPC):
             pygame.display.flip()
             clock.tick(FPS)
 
+    def finish_dialog(self):
+        self.flag = False
+
+    def special_function(self):
+        self.finish_dialog()
+
+
+class Merchant(NPC):
+    def __init__(self, npc_number, pos_x, pos_y):
+        super().__init__(npc_number, "merchant", pos_x, pos_y)
+        self.text_ok = "Магазин"
+        self.inserters = []
+        f = open(f'data/{current_city}/{self.number}_shop.txt', encoding='utf-8')
+        self.shop = f.read().split('\n')
+        f.close()
+
     def open_shop(self):
         screen2 = pygame.Surface((WIDTH, HEIGHT))
         screen2.fill((250, 230, 180))
         elements = []
         self.inserters = []
-        self.shop = []
-        with open(f"data/{self.city}/2_shop.csv", mode='rt', encoding='utf-8') as csvfile:
-            reader = csv.reader(csvfile, delimiter=';', quotechar='"')
-            line = ["Название:", "количество:", "стоимость:", "  купить:"]
-            text = thorpy.OneLineText(''.join(map(lambda x: x.ljust(12, ' '), line)))
-            text.set_font('consolas')
-            box = thorpy.Box([text])
-            box.set_size((WIDTH * 0.75, 40))
-            box.set_main_color((255, 220, 130, 120))
+        line = ["Название:", "количество:", "стоимость:", "  купить:"]
+        text = thorpy.OneLineText(''.join(map(lambda x: x.ljust(12, ' '), line)))
+        text.set_font('consolas')
+        elements.append(create_box([text]))
+        for i, good in enumerate(self.shop, start=1):
+            line = get_good_info(good)
+            text1 = thorpy.OneLineText(''.join(map(lambda x: x.ljust(12, ' '), line)))
+            text1.set_font('consolas')
+            inserter = thorpy.Inserter(value="0")
+            box = create_box([text1, inserter])
             elements.append(box)
-            for i, line in enumerate(reader, start=1):
-                self.shop.append(line)
-                text1 = thorpy.OneLineText(''.join(map(lambda x: x.ljust(12, ' '), line)))
-                text1.set_font('consolas')
-                inserter = thorpy.Inserter(value="0")
-                box = thorpy.Box([text1, inserter])
-                box.set_size((WIDTH * 0.75, 40))
-                box.set_main_color((250, 230, 180, 120))
-                thorpy.store(box, mode="h")
-                elements.append(box)
-                self.inserters.append(inserter)
+            thorpy.store(box, mode="h")
+            self.inserters.append(inserter)
+
+        coin_image = thorpy.Image(path="data/icons/coin.png")
+        coin_image.set_topleft((5, 5))
+        coin_image.blit()
+        coin_image.update()
+
+        self.con_taisia_db = sqlite3.connect(
+            'data/login_db.db')  # !!! ТУТ НУЖНО УКАЗАТЬ СВОЙ ПУТЬ ДО login_db.db
+        self.cur_taisia_db = self.con_taisia_db.cursor()
+        self.money_left = \
+            self.cur_taisia_db.execute(
+                f"SELECT money FROM users WHERE name='{current_player}'").fetchone()[0]
+        self.money_text = thorpy.make_text(str(self.money_left), font_size=10, font_color=(0, 0, 0))
+        self.money_text.set_topleft((25, 5))
+        self.money_text.blit()
+        self.money_text.update()
 
         central_box = thorpy.Box(elements=elements)
         central_box.set_size((WIDTH * 0.8, HEIGHT * 0.7))
         central_box.set_main_color((255, 220, 130, 120))
         central_box.set_topleft((50, 50))
         central_box.add_lift()
+
         menu = thorpy.Menu(central_box)
         for element in menu.get_population():
             element.surface = screen2
         central_box.blit()
         central_box.update()
-
         btn_buy = create_button("Совершить покупку", self.purchase_items,
                                 screen2, (150, 30), ('left', 0.9))
-        btn_buy.blit()
-        btn_buy.update()
-
         btn_quit = create_button("Отменить покупку", self.finish_dialog,
                                  screen2, (150, 30), ('right', 0.9))
-        btn_quit.blit()
-        btn_quit.update()
-
         screen.blit(screen2, (0, 0))
         while self.flag:
             for event in pygame.event.get():
@@ -329,31 +368,164 @@ class Merchant(NPC):
                 menu.react(event)
             pygame.display.flip()
             screen.blit(screen2, (0, 0))
+            coin_image.blit()  # by Taisia
+            self.money_text.blit()  # by Taisia
             clock.tick(FPS)
 
     def purchase_items(self):
-        purchase = []
+        global inventory
+        temp = inventory.copy()
         total = 0
+
         try:
-            for txt_box, line in zip(self.inserters, self.shop):
+            for txt_box, good in zip(self.inserters, self.shop):
                 amount = int(txt_box.get_value())
                 if amount < 0:
                     raise ValueError
                 if amount > 0:
-                    purchase.append(line + [amount])
-                    total += int(line[-1] * amount)
-            global money
-            if total > money:
+                    total += int(get_good_info(good)[-1]) * amount
+                    temp[good] = temp.get(good, 0) + amount
+
+            if total > self.money_left:
                 raise ValueError
-            money -= total
-            inventory.extend(purchase)
+            self.money_left -= total
+            self.cur_taisia_db.execute(f'UPDATE users SET money=? WHERE name="{current_player}"',
+                                       (self.money_left,))
+            self.con_taisia_db.commit()
+            inventory = temp.copy()
+            save_items()
         except ValueError:
-            return  # Добавить MessageBox
-
+            thorpy.launch_blocking_alert(title="Ошибка!",
+                                         text="Некорректные данные! Попробуйте снова",
+                                         parent=None,
+                                         ok_text="Я больше так не буду!")
+            return
+        thorpy.launch_blocking_alert(title="Успех!",
+                                     text=f"Покупка успешна.",
+                                     parent=None,
+                                     ok_text="Доставить покупки на корабль")
         self.flag = False
 
-    def finish_dialog(self):
+    def special_function(self):
+        self.open_shop()
+
+
+class Buyer(NPC):
+    def __init__(self, npc_number, pos_x, pos_y):
+        super().__init__(npc_number, "buyer", pos_x, pos_y)
+        self.text_ok = "Магазин"
+        self.inserters = []
+        self.shop = list(inventory.keys())
+
+    def open_shop(self):
+        global inventory
+        self.shop = list(inventory.keys())
+        if not self.shop:
+            self.shop = ["Ничего"]
+            inventory["Ничего"] = 1
+        self.shop = list(inventory.keys())
+        screen2 = pygame.Surface((WIDTH, HEIGHT))
+        screen2.fill((250, 230, 180))
+        elements = []
+        self.inserters = []
+        line = ["Название:", "количество:", "стоимость:", "  купить:"]
+        text = thorpy.OneLineText(''.join(map(lambda x: x.ljust(12, ' '), line)))
+        text.set_font('consolas')
+        elements.append(create_box([text]))
+        for i, good in enumerate(self.shop, start=1):
+            line = get_good_info(good)
+            text1 = thorpy.OneLineText(''.join(map(lambda x: x.ljust(12, ' '), line)))
+            text1.set_font('consolas')
+            slider = thorpy.SliderX(40, (0, inventory[good]),
+                                    type_=int, initial_value=0)
+
+            box = create_box([text1, slider])
+            elements.append(box)
+            thorpy.store(box, mode="h")
+            self.inserters.append(slider)
+
+        coin_image = thorpy.Image(path="data/icons/coin.png")
+        coin_image.set_topleft((5, 5))
+        coin_image.blit()
+        coin_image.update()
+
+        self.con_taisia_db = sqlite3.connect(
+            'data/login_db.db')  # !!! ТУТ НУЖНО УКАЗАТЬ СВОЙ ПУТЬ ДО login_db.db
+        self.cur_taisia_db = self.con_taisia_db.cursor()
+        self.money_left = \
+            self.cur_taisia_db.execute(
+                f"SELECT money FROM users WHERE name='{current_player}'").fetchone()[0]
+        self.money_text = thorpy.make_text(str(self.money_left), font_size=10, font_color=(0, 0, 0))
+        self.money_text.set_topleft((25, 5))
+        self.money_text.blit()
+        self.money_text.update()
+
+        central_box = thorpy.Box(elements=elements)
+        central_box.set_size((WIDTH * 0.8, HEIGHT * 0.7))
+        central_box.set_main_color((255, 220, 130, 120))
+        central_box.set_topleft((50, 50))
+        central_box.add_lift()
+
+        menu = thorpy.Menu(central_box)
+        for element in menu.get_population():
+            element.surface = screen2
+        central_box.blit()
+        central_box.update()
+        btn_buy = create_button("Совершить продажу", self.sell_items,
+                                screen2, (150, 30), ('left', 0.9))
+        btn_quit = create_button("Отменить продажу", self.finish_dialog,
+                                 screen2, (150, 30), ('right', 0.9))
+        screen.blit(screen2, (0, 0))
+        while self.flag:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    terminate()
+                btn_quit.react(event)
+                btn_buy.react(event)
+                menu.react(event)
+            pygame.display.flip()
+            screen.blit(screen2, (0, 0))
+            coin_image.blit()  # by Taisia
+            self.money_text.blit()  # by Taisia
+            clock.tick(FPS)
+
+    def sell_items(self):
+        global inventory
+
+        temp = inventory.copy()
+        total = 0
+
+        try:
+            for txt_box, good in zip(self.inserters, self.shop):
+                amount = int(txt_box.get_value())
+                if amount < 0:
+                    raise ValueError
+                if amount > 0:
+                    total += int(get_good_info(good)[-1]) * amount
+                    temp[good] = temp.get(good, 0) - amount
+                    if temp[good] == 0:
+                        del temp[good]
+
+            self.money_left += total
+            self.cur_taisia_db.execute(f'UPDATE users SET money=? WHERE name="{current_player}"',
+                                       (self.money_left,))
+            self.con_taisia_db.commit()
+            inventory = temp.copy()
+            save_items()
+        except ValueError:
+            thorpy.launch_blocking_alert(title="Ошибка!",
+                                         text="Некорректные данные! Попробуйте снова",
+                                         parent=None,
+                                         ok_text="Я больше так не буду!")
+            return
+        thorpy.launch_blocking_alert(title="Успех!",
+                                     text=f"Продажа успешна!",
+                                     parent=None,
+                                     ok_text="Отослать товары с корабля")
         self.flag = False
+
+    def special_function(self):
+        self.open_shop()
 
 
 class Camera:
@@ -384,7 +556,7 @@ def enter_city(city_name):
 
     global player, level_x, level_y
     level = load_level(city_name + '/city.txt')
-    player, level_x, level_y = generate_level(level, city_name)
+    player, level_x, level_y = generate_level(level)
     PLAYER_MOVE_EVENT = pygame.USEREVENT + 1
     move = (0, 0)
     while True:
@@ -410,6 +582,8 @@ def enter_city(city_name):
                     pygame.time.set_timer(PLAYER_MOVE_EVENT, 250)
                 elif event.key == pygame.K_SPACE:
                     for sprite in Npc_group:
+                        if not isinstance(sprite, (Merchant, NPC)):
+                            pass
                         if abs(sprite.pos_x - player.pos_x) <= 1 and abs(
                                 sprite.pos_y - player.pos_y) <= 1:
                             sprite.intro_dialog()
@@ -439,10 +613,10 @@ def enter_city(city_name):
 
 
 # Загрузка файлов игры
-current_player = 'player1'
+current_player = 'admin'
 money = 0
 current_city = 'city1'
-inventory = []
+inventory = dict()
 start_screen()
 load_items()
 
