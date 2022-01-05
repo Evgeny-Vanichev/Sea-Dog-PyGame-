@@ -558,28 +558,25 @@ def enter_city(city_name):
     level = load_level(city_name + '/city.txt')
     player, level_x, level_y = generate_level(level)
     PLAYER_MOVE_EVENT = pygame.USEREVENT + 1
-    move = (0, 0)
+    move_x, move_y = 0, 0
+    pygame.time.set_timer(PLAYER_MOVE_EVENT, 250)
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 terminate()
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_LEFT:
-                    move = (-1, 0)
-                    player.move(*move)
-                    pygame.time.set_timer(PLAYER_MOVE_EVENT, 250)
-                elif event.key == pygame.K_RIGHT:
-                    move = (1, 0)
-                    player.move(*move)
-                    pygame.time.set_timer(PLAYER_MOVE_EVENT, 250)
-                elif event.key == pygame.K_UP:
-                    move = (0, -1)
-                    player.move(*move)
-                    pygame.time.set_timer(PLAYER_MOVE_EVENT, 250)
-                elif event.key == pygame.K_DOWN:
-                    move = (0, 1)
-                    player.move(*move)
-                    pygame.time.set_timer(PLAYER_MOVE_EVENT, 250)
+                if event.key == pygame.K_LEFT and move_x != -1:
+                    move_x = -1
+                    player.move(move_x, move_y)
+                elif event.key == pygame.K_RIGHT and move_x != 1:
+                    move_x = 1
+                    player.move(move_x, move_y)
+                elif event.key == pygame.K_UP and move_y != -1:
+                    move_y = -1
+                    player.move(move_x, move_y)
+                elif event.key == pygame.K_DOWN and move_y != 1:
+                    move_y = 1
+                    player.move(move_x, move_y)
                 elif event.key == pygame.K_SPACE:
                     for sprite in Npc_group:
                         if not isinstance(sprite, (Merchant, NPC)):
@@ -588,10 +585,12 @@ def enter_city(city_name):
                                 sprite.pos_y - player.pos_y) <= 1:
                             sprite.intro_dialog()
             elif event.type == pygame.KEYUP:
-                move = (0, 0)
-                pygame.time.set_timer(PLAYER_MOVE_EVENT, 250)
+                if event.key in (pygame.K_LEFT, pygame.K_RIGHT):
+                    move_x = 0
+                elif event.key in (pygame.K_UP, pygame.K_DOWN):
+                    move_y = 0
             elif event.type == PLAYER_MOVE_EVENT:
-                player.move(*move)
+                player.move(move_x, move_y)
 
         # изменяем ракурс камеры
         camera.update(player)
