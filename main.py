@@ -3,55 +3,20 @@ import os
 import random
 import sqlite3
 import sys
+from pirate_test import *
 
 import pygame
 import thorpy
 
-FPS = 50
+from start_screen import start_screen
 
+FPS = 50
 # Изображение не получится загрузить
 # без предварительной инициализации pygame
 pygame.init()
 SIZE = WIDTH, HEIGHT = 500, 500
 screen = pygame.display.set_mode(SIZE)
 clock = pygame.time.Clock()
-
-
-def start_screen():
-    intro_text = ["ЗАСТАВКА", "",
-                  "Правила игры",
-                  "Если в правилах несколько строк,",
-                  "приходится выводить их построчно"]
-
-    fon = pygame.transform.scale(load_image('fon.jpg'), (WIDTH, HEIGHT))
-    screen.blit(fon, (0, 0))
-    font = pygame.font.Font(None, 30)
-    text_coord = 50
-    for line in intro_text:
-        string_rendered = font.render(line, True, pygame.Color('white'))
-        intro_rect = string_rendered.get_rect()
-        text_coord += 10
-        intro_rect.top = text_coord
-        intro_rect.x = 10
-        text_coord += intro_rect.height
-
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                terminate()
-            elif event.type == pygame.KEYDOWN or \
-                    event.type == pygame.MOUSEBUTTONDOWN:
-                return  # начинаем игру
-        pygame.display.flip()
-        clock.tick(FPS)
-    while True:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                terminate()
-            elif event.type == pygame.KEYDOWN or \
-                    event.type == pygame.MOUSEBUTTONDOWN:
-                return  # начинаем игру
-        pygame.display.flip()
-        clock.tick(FPS)
 
 
 def load_items():
@@ -108,7 +73,7 @@ def load_level(filename):
     max_width = max(map(len, level_map))
 
     # дополняем каждую строку пустыми клетками ('.')
-    return list(map(lambda x: x.ljust(max_width, '.'), level_map))
+    return list(map(lambda x: list(x.ljust(max_width, '.')), level_map))
 
 
 def generate_level(level):
@@ -125,6 +90,22 @@ def generate_level(level):
                 create_npc(level[y][x], x, y)
     new_player = Player(player_x, player_y)
     # вернем игрока, а также размер поля в клетках
+    return new_player, x, y
+
+
+def generate_sea_map(level):
+    new_player, x, y = None, None, None
+    for y in range(len(level)):
+        for x in range(len(level[y])):
+            if level[y][x] == '.':
+                Tile('empty', x, y)
+            elif level[y][x] == 'x':
+                Tile('pirate', x, y)
+            elif level[y][x] == 'o':
+                Tile('island', x, y)
+            elif level[y][x] == '@':
+                Tile('empty', x, y)
+                new_player = Player(x, y)
     return new_player, x, y
 
 
@@ -146,6 +127,10 @@ class Tile(pygame.sprite.Sprite):
     def __init__(self, tile_type, pos_x, pos_y):
         if tile_type == 'wall':
             super().__init__(walls_group, tiles_group, all_sprites)
+        elif tile_type == 'island':
+            super().__init__(island_group, tiles_group, all_sprites)
+        elif tile_type == 'pirate':
+            super().__init__(pirate_group, tiles_group, all_sprites)
         else:
             super().__init__(tiles_group, all_sprites)
         self.image = tile_images[tile_type]
@@ -160,7 +145,7 @@ class Player(pygame.sprite.Sprite):
         self.image = player_image
         self.left = True
         self.rect = self.image.get_rect().move(
-            tile_width * pos_x + 15, tile_height * pos_y + 1)
+            tile_width * pos_x + (tile_width - self.image.get_width()) // 2, tile_height * pos_y + 1)
 
     def turn_over(self, dx):
         if dx == 0:
@@ -548,18 +533,14 @@ class Camera:
 
 
 def enter_city(city_name):
-    global Npc_group
-    Npc_group = pygame.sprite.Group()
-
-    tile_images['wall'] = load_image('icons/house.png')
-    tile_images['empty'] = load_image('icons/road.png')
+    set_configuration("city")
 
     global player, level_x, level_y
     level = load_level(city_name + '/city.txt')
     player, level_x, level_y = generate_level(level)
     PLAYER_MOVE_EVENT = pygame.USEREVENT + 1
     move_x, move_y = 0, 0
-    pygame.time.set_timer(PLAYER_MOVE_EVENT, 250)
+    pygame.time.set_timer(PLAYER_MOVE_EVENT, 150)
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -591,8 +572,8 @@ def enter_city(city_name):
                     move_y = 0
             elif event.type == PLAYER_MOVE_EVENT:
                 player.move(move_x, move_y)
-                if player.pos_y == level_y:
-                    return
+        if player.pos_y == level_y:
+            return
 
         # изменяем ракурс камеры
         camera.update(player)
@@ -613,12 +594,127 @@ def enter_city(city_name):
         clock.tick(FPS)
 
 
+def set_configuration(param):
+    global player_group
+    global Npc_group
+    global tiles_group
+    global island_group
+    global all_sprites
+    global walls_group
+    global pirate_group
+
+    global tile_images
+    global player_image
+
+    if param == "sea":
+        screen.fill((153, 217, 234))
+        tile_images = {
+            'pirate': load_image('icons/pirate_flag.jpg'),
+            'empty': load_image('icons/sea_tile.png'),
+            'island': load_image('icons/road.png')
+        }
+        player_image = load_image('icons/ship.png')
+        all_sprites = pygame.sprite.Group()
+        player_group = pygame.sprite.Group()
+        tiles_group = pygame.sprite.Group()
+        island_group = pygame.sprite.Group()
+        Npc_group = pygame.sprite.Group()
+        walls_group = pygame.sprite.Group()
+        pirate_group = pygame.sprite.Group()
+
+    elif param == "city":
+        Npc_group = pygame.sprite.Group()
+        tile_images['wall'] = load_image('icons/house.png')
+        tile_images['empty'] = load_image('icons/road.png')
+        player_image = load_image('icons/player.png')
+
+
+def sea_travel():
+    global level_x, level_y, current_city
+
+    set_configuration('sea')
+
+    level = load_level('sea_map_2.txt')
+    player, level_x, level_y = generate_sea_map(level)
+    camera = Camera()
+    running = True
+
+    PLAYER_MOVE_EVENT = pygame.USEREVENT + 1
+    move_x, move_y = 0, 0
+    pygame.time.set_timer(PLAYER_MOVE_EVENT, 150)
+
+    while running:
+        for event in pygame.event.get():
+            level[player.pos_y][player.pos_x] = '.'
+            all_sprites.draw(screen)
+            if event.type == pygame.QUIT:
+                terminate()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_LEFT and move_x != -1:
+                    move_x = -1
+                    player.move(move_x, move_y)
+                elif event.key == pygame.K_RIGHT and move_x != 1:
+                    move_x = 1
+                    player.move(move_x, move_y)
+                elif event.key == pygame.K_UP and move_y != -1:
+                    move_y = -1
+                    player.move(move_x, move_y)
+                elif event.key == pygame.K_DOWN and move_y != 1:
+                    move_y = 1
+                    player.move(move_x, move_y)
+            elif event.type == pygame.KEYUP:
+                if event.key in (pygame.K_LEFT, pygame.K_RIGHT):
+                    move_x = 0
+                elif event.key in (pygame.K_UP, pygame.K_DOWN):
+                    move_y = 0
+            elif event.type == PLAYER_MOVE_EVENT:
+                player.move(move_x, move_y)
+            if pygame.sprite.spritecollideany(player, island_group):
+                current_city = 'city1'
+                level[player.pos_y][player.pos_x-1] = '@'
+                move_x = move_y = 0
+            elif pygame.sprite.spritecollideany(player, pirate_group):
+                test = PirateTest(0)
+                test.launch_game()
+                player.move(0, -1)
+                level[player.pos_y][player.pos_x] = '@'
+                move_x = move_y = 0
+            else:
+                level[player.pos_y][player.pos_x] = '@'
+
+        if current_city:
+            enter_city(current_city)
+            current_city = ''
+            set_configuration("sea")
+            player, level_x, level_y = generate_sea_map(level)
+
+        camera.update(player)
+        for sprite in all_sprites:
+            camera.apply(sprite)
+
+        screen.fill((153, 217, 234))
+        tiles_group.draw(screen)
+        player_group.draw(screen)
+        font = pygame.font.Font(None, 15)
+        text = font.render('X: ' + str(player.pos_x * tile_width), True, (0, 0, 0))
+        text_x = 10
+        text_y = 10
+        screen.blit(text, (text_x, text_y))
+        text = font.render('Y: ' + str(player.pos_y * tile_height), True, (0, 0, 0))
+        text_x = 10
+        text_y = 20
+        screen.blit(text, (text_x, text_y))
+        pygame.display.flip()
+
+    pygame.quit()
+
+
+current_player = start_screen()
+
 # Загрузка файлов игры
-current_player = 'admin'
 money = 0
-current_city = 'city1'
+current_city = ''
 inventory = dict()
-start_screen()
 load_items()
 
 # группы спрайтов
@@ -627,11 +723,10 @@ tiles_group = pygame.sprite.Group()
 walls_group = pygame.sprite.Group()
 player_group = pygame.sprite.Group()
 camera = Camera()
-
 tile_width = tile_height = 50
 tile_images = {
     'wall': load_image('icons/house.png'),
     'empty': load_image('icons/road.png')
 }
 player_image = load_image('icons/player.png')
-enter_city(current_city)
+sea_travel()
