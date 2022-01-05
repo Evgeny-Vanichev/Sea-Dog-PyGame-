@@ -1,13 +1,11 @@
 import csv
 import os
-import random
 import sqlite3
 import sys
 from pirate_test import *
 
 import pygame
 import thorpy
-
 from start_screen import start_screen
 
 FPS = 50
@@ -36,8 +34,17 @@ def save_items():
         writer = csv.writer(csvfile, delimiter=';', quotechar='"')
         for key, value in inventory.items():
             writer.writerow([key, value])
+
     with open(f'data/{current_player}/progress.txt', mode='wt', encoding='utf8') as file:
         file.write(current_city)
+
+
+def save_file(level):
+    with open(f'data/{current_player}/sea_map_0.csv', mode='wt', encoding='utf-8',
+              newline='') as csvfile:
+        writer = csv.writer(csvfile, delimiter=';', quotechar='"')
+        for key, value in level.items():
+            writer.writerow([key, *value])
 
 
 def terminate():
@@ -94,19 +101,14 @@ def generate_level(level):
 
 
 def generate_sea_map(level):
-    new_player, x, y = None, None, None
-    for y in range(len(level)):
-        for x in range(len(level[y])):
-            if level[y][x] == '.':
-                Tile('empty', x, y)
-            elif level[y][x] == 'x':
-                Tile('pirate', x, y)
-            elif level[y][x] == 'o':
-                Tile('island', x, y)
-            elif level[y][x] == '@':
-                Tile('empty', x, y)
-                new_player = Player(x, y)
-    return new_player, x, y
+    new_player = None
+    for obj in level:
+        obj_type, x, y = level[obj]
+        if obj_type == 'player':
+            new_player = Player(x // 50, y // 50)
+        else:
+            Tile(obj_type, x // 50, y // 50)
+    return new_player
 
 
 def create_npc(number, x, y):
@@ -145,7 +147,8 @@ class Player(pygame.sprite.Sprite):
         self.image = player_image
         self.left = True
         self.rect = self.image.get_rect().move(
-            tile_width * pos_x + (tile_width - self.image.get_width()) // 2, tile_height * pos_y + 1)
+            tile_width * pos_x + (tile_width - self.image.get_width()) // 2,
+            tile_height * pos_y + 1)
 
     def turn_over(self, dx):
         if dx == 0:
@@ -162,12 +165,11 @@ class Player(pygame.sprite.Sprite):
 
     def move(self, dx, dy):
         self.turn_over(dx)
-
         self.pos_x += dx
         self.pos_y += dy
         self.rect = self.rect.move(dx * tile_width, dy * tile_height)
         try:
-            if not (0 <= self.pos_x <= level_x and 0 <= self.pos_y <= level_y):
+            if not (level_0 <= self.pos_x <= level_x and level_0 <= self.pos_y <= level_y):
                 raise IndexError
             if pygame.sprite.spritecollideany(self, walls_group):
                 raise IndexError
@@ -525,17 +527,18 @@ class Camera:
         obj.rect.y += self.dy
 
     # позиционировать камеру на объекте target
-    def update(self, target):
-        if 4 < target.pos_x < level_x - 4:
+    def update(self, target, ignore_borders=False):
+        if ignore_borders or 4 < target.pos_x < level_x - 4:
             self.dx = -(target.rect.x + target.rect.w // 2 - WIDTH // 2)
-        if 4 < target.pos_y < level_y - 4:
+        if ignore_borders or 4 < target.pos_y < level_y - 4:
             self.dy = -(target.rect.y + target.rect.h // 2 - HEIGHT // 2)
 
 
 def enter_city(city_name):
     set_configuration("city")
 
-    global player, level_x, level_y
+    global player, level_0, level_x, level_y
+    level_0 = 0
     level = load_level(city_name + '/city.txt')
     player, level_x, level_y = generate_level(level)
     PLAYER_MOVE_EVENT = pygame.USEREVENT + 1
@@ -630,12 +633,21 @@ def set_configuration(param):
 
 
 def sea_travel():
-    global level_x, level_y, current_city
+    global current_city
+    global level_0, level_x, level_y
+    level_0 = -float("inf")
+    level_x = float("inf")
+    level_y = float("inf")
 
     set_configuration('sea')
+    level = dict()
+    with open(f'data/{current_player}/sea_map_0.csv', mode='rt', encoding='utf-8') as csvfile:
+        reader = csv.reader(csvfile, delimiter=';', quotechar='"')
+        for line in reader:
+            obj_name, obj_type, x, y = line
+            level[obj_name] = (obj_type, int(x), int(y))
 
-    level = load_level('sea_map_2.txt')
-    player, level_x, level_y = generate_sea_map(level)
+    player = generate_sea_map(level)
     camera = Camera()
     running = True
 
@@ -645,7 +657,6 @@ def sea_travel():
 
     while running:
         for event in pygame.event.get():
-            level[player.pos_y][player.pos_x] = '.'
             all_sprites.draw(screen)
             if event.type == pygame.QUIT:
                 terminate()
@@ -670,25 +681,33 @@ def sea_travel():
             elif event.type == PLAYER_MOVE_EVENT:
                 player.move(move_x, move_y)
             if pygame.sprite.spritecollideany(player, island_group):
-                current_city = 'city1'
-                level[player.pos_y][player.pos_x-1] = '@'
+                current_city = ''
+                for key in level:
+                    if level[key] == ('island', player.pos_x * 50, player.pos_y * 50):
+                        current_city = key
+                        break
+                level['player'] = ('player', (player.pos_x - 1) * 50, player.pos_y * 50)
                 move_x = move_y = 0
             elif pygame.sprite.spritecollideany(player, pirate_group):
                 test = PirateTest(0)
                 test.launch_game()
                 player.move(0, -1)
-                level[player.pos_y][player.pos_x] = '@'
+                level['player'] = ('player', player.pos_x * 50, player.pos_y * 50)
                 move_x = move_y = 0
             else:
-                level[player.pos_y][player.pos_x] = '@'
+                level['player'] = ('player', player.pos_x * 50, player.pos_y * 50)
+            save_file(level)
 
         if current_city:
             enter_city(current_city)
             current_city = ''
             set_configuration("sea")
-            player, level_x, level_y = generate_sea_map(level)
+            player = generate_sea_map(level)
+            level_0 = -float("inf")
+            level_x = float("inf")
+            level_y = float("inf")
 
-        camera.update(player)
+        camera.update(player, ignore_borders=True)
         for sprite in all_sprites:
             camera.apply(sprite)
 
