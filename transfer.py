@@ -1,3 +1,5 @@
+import random
+
 import pygame
 import os
 import sys
@@ -22,14 +24,11 @@ def terminate():
 def transfer():
     global size
     global screen
-
     pygame.init()
     size = width, height = 500, 500
     screen = pygame.display.set_mode(size)
-
     clock = pygame.time.Clock()
-
-    fon = pygame.transform.scale(load_image('icons\\transfer.jpg'), (500, 500))
+    fon = pygame.transform.scale(load_image(f'icons\\transfer\\{random.randint(1, 5)}.jpg'), (500, 500))
     screen.blit(fon, (0, 0))
     font = pygame.font.Font(None, 20)
     text = font.render("здесь расположены ведущие в этом мире поля и сады.", True, (0, 0, 0))
@@ -49,6 +48,4 @@ def transfer():
                 terminate()
         pygame.display.flip()
         clock.tick(FPS)
-
-
 transfer()

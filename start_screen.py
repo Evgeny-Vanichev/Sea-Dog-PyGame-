@@ -34,6 +34,11 @@ class Login(QMainWindow, Ui_MainWindow):
             print(x)
             con.commit()
             current_player = self.lineEdit.text()
+            os.mkdir(f'data/{current_player}')
+            path = os.path.abspath('data')
+            for file in os.listdir('data/basic_profile'):
+                os.system(
+                    f'copy "{path}\\basic_profile\\{file}" "{path}\\{current_player}\\{file}"')
             self.close()
         else:
             password = cur.execute('SELECT password FROM passwords '
@@ -97,8 +102,8 @@ def start_screen():
     text_y = 315
     screen.blit(text, (text_x, text_y))
     app = QApplication(sys.argv)
+    sys.excepthook = except_hook
     login = Login()
-
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -110,3 +115,10 @@ def start_screen():
                     return current_player
         pygame.display.flip()
         clock.tick(FPS)
+
+
+def except_hook(a, b, c):
+    sys.__excepthook__(a, b, c)
+
+
+start_screen()
