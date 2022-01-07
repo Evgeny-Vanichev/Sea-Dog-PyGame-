@@ -1,6 +1,7 @@
 import pygame
 import os
 import sys
+import thorpy
 
 FPS = 50
 
@@ -14,49 +15,73 @@ def load_image(name, colorkey=None):
     return image
 
 
-def terminate():
-    pygame.quit()
-    sys.exit()
+def iNeedYou(event):
+    global info_text
+    try:
+        event.el.set_font_color_hover((93, 46, 32))
+        lines = ["Заработайте",str(int(event.el.get_value()) ** 3 * 10000),"монет"]
+        lines = [x.rjust(len("Заработайте"), ' ') for x in lines]
+        info_text.set_text('\n'.join(map(lambda x: x.rjust(len(lines[0]) // 2, ' '), lines)))
+
+        info_text.blit()
+        info_text.update()
+    except AttributeError:
+        pass
+
+
+def my_reaction():
+    global dropdownlist, menu
+    if dropdownlist.get_value() != '':
+        # sea_travel(int(dropdownlist.get_value()))
+        print(f'sea_travel level {dropdownlist.get_value()} launched')
+
+
+def basic_styling(obj):
+    obj.set_font("data/icons/GorgeousPixel.ttf")
+    obj.set_main_color((252, 247, 165))
+    obj.set_font_size(50)
+    obj.scale_to_title()
+    try:
+        obj.set_font_color_hover((93, 46, 32))
+    except AttributeError:
+        obj.set_font_color((93, 46, 32))
+        obj.set_font("data/icons/GorgeousPixel.ttf")
 
 
 def main_menu():
-    global size
-    global screen
-
+    global dropdownlist, info_text
     pygame.init()
-    size = width, height = 500, 500
+    size = 500, 500
     screen = pygame.display.set_mode(size)
+    text = thorpy.make_text("Выбери уровень")
+    basic_styling(text)
 
-    clock = pygame.time.Clock()
+    info_text = thorpy.Element()
+    info_text.set_main_color((252, 247, 165))
+    info_text.set_font_size(25)
+    info_text.set_font("data/icons/GorgeousPixel.ttf")
+    info_text.set_size((175, 70))
+    ddlist = thorpy.DropDownList(titles=[str(i) for i in range(1, 9)])
+    ddlist.set_font("data/icons/GorgeousPixel.ttf")
+    ddlist.set_main_color((252, 247, 165))
+    ddlist.set_font_size(40)
 
-    fon = pygame.transform.scale(load_image('icons\menu.png'), (500, 500))
-    screen.blit(fon, (0, 0))
-    font = pygame.font.Font("data/icons/GorgeousPixel.ttf", 50)
-    name = font.render("Main menu", True, (0, 0, 0))
-    name_x = 125
-    name_y = 120
-    screen.blit(name, (name_x, name_y))
-    font = pygame.font.Font("data/icons/GorgeousPixel.ttf", 30)
-    text = font.render("Level 1", True, (0, 0, 0))
-    text_x = 200
-    text_y = 315
-    screen.blit(text, (text_x, text_y))
-    font = pygame.font.Font(None, 40)
-    text = font.render("Соберите 1000 монет", True, (0, 0, 0))
-    text_x = 120
-    text_y = 250
-    screen.blit(text, (text_x, text_y))
-    rect = pygame.draw.rect(screen, (0, 0, 0), (193, 310, 110, 45), 5)
+    dropdownlist = thorpy.DropDownListLauncher(const_text="level ",
+                                               var_text="",
+                                               titles=ddlist)
+    dropdownlist.add_reaction(thorpy.Reaction(reacts_to=thorpy.constants.THORPY_EVENT,
+                                              reac_func=iNeedYou,
+                                              event_args={"id": thorpy.constants.EVENT_DDL}))
+    basic_styling(dropdownlist)
 
-    while True:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                terminate()
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                if 105 <= event.pos[0] <= 405 and 300 <= event.pos[1] <= 350:
-                    terminate()
-        pygame.display.flip()
-        clock.tick(FPS)
+    btn_start = thorpy.make_button("start", my_reaction)
+    basic_styling(btn_start)
+
+    background = thorpy.Background(image='data\icons\menu.png',
+                                   elements=[text, dropdownlist, info_text, btn_start])
+    thorpy.store(background, align="center")
+    menu = thorpy.Menu(background)
+    menu.play()
 
 
 main_menu()

@@ -2,11 +2,13 @@ import csv
 import os
 import sqlite3
 import sys
+
 from pirate_test import *
 
 import pygame
 import thorpy
-from start_screen import start_screen
+from start_screen import *
+from transfer import *
 
 FPS = 50
 # Изображение не получится загрузить
@@ -19,28 +21,29 @@ clock = pygame.time.Clock()
 
 def load_items():
     global current_city, inventory
-    with open(f'data/{current_player}/inventory.csv', mode='rt', encoding='utf8') as csvfile:
+    with open(f'data/players/{current_player}/inventory.csv', mode='rt',
+              encoding='utf8') as csvfile:
         reader = csv.reader(csvfile, delimiter=';', quotechar='"')
         for line in reader:
             inventory[line[0]] = int(line[1])
-    with open(f'data/{current_player}/progress.txt', mode='rt', encoding='utf8') as file:
+    with open(f'data/players/{current_player}/progress.txt', mode='rt', encoding='utf8') as file:
         current_city = file.readline().strip('\n')
 
 
 def save_items():
     global money
-    with open(f'data/{current_player}/inventory.csv', mode='wt', encoding='utf8',
+    with open(f'data/players/{current_player}/inventory.csv', mode='wt', encoding='utf8',
               newline='') as csvfile:
         writer = csv.writer(csvfile, delimiter=';', quotechar='"')
         for key, value in inventory.items():
             writer.writerow([key, value])
 
-    with open(f'data/{current_player}/progress.txt', mode='wt', encoding='utf8') as file:
+    with open(f'data/players/{current_player}/progress.txt', mode='wt', encoding='utf8') as file:
         file.write(current_city)
 
 
 def save_file(level):
-    with open(f'data/{current_player}/sea_map_0.csv', mode='wt', encoding='utf-8',
+    with open(f'data/players/{current_player}/sea_map_0.csv', mode='wt', encoding='utf-8',
               newline='') as csvfile:
         writer = csv.writer(csvfile, delimiter=';', quotechar='"')
         for key, value in level.items():
@@ -224,7 +227,7 @@ def create_box(elements):
 
 
 def get_good_info(good):
-    con = sqlite3.connect(f"data/{current_city}/price_list.db")
+    con = sqlite3.connect(f"data/cities/{current_city}/price_list.db")
     result = con.cursor().execute(
         f"""SELECT * FROM goods
             WHERE name == '{good}'""").fetchall()
@@ -291,7 +294,7 @@ class Merchant(NPC):
         super().__init__(npc_number, "merchant", pos_x, pos_y)
         self.text_ok = "Магазин"
         self.inserters = []
-        f = open(f'data/{current_city}/{self.number}_shop.txt', encoding='utf-8')
+        f = open(f'data/cities/{current_city}/{self.number}_shop.txt', encoding='utf-8')
         self.shop = f.read().split('\n')
         f.close()
 
@@ -539,7 +542,7 @@ def enter_city(city_name):
 
     global player, level_0, level_x, level_y
     level_0 = 0
-    level = load_level(city_name + '/city.txt')
+    level = load_level('cities/' + city_name + '/city.txt')
     player, level_x, level_y = generate_level(level)
     PLAYER_MOVE_EVENT = pygame.USEREVENT + 1
     move_x, move_y = 0, 0
@@ -552,19 +555,23 @@ def enter_city(city_name):
                 if event.key == pygame.K_LEFT and move_x != -1:
                     move_x = -1
                     player.move(move_x, move_y)
+                    pygame.time.set_timer(PLAYER_MOVE_EVENT, 150)
                 elif event.key == pygame.K_RIGHT and move_x != 1:
                     move_x = 1
                     player.move(move_x, move_y)
+                    pygame.time.set_timer(PLAYER_MOVE_EVENT, 150)
                 elif event.key == pygame.K_UP and move_y != -1:
                     move_y = -1
                     player.move(move_x, move_y)
+                    pygame.time.set_timer(PLAYER_MOVE_EVENT, 150)
                 elif event.key == pygame.K_DOWN and move_y != 1:
                     move_y = 1
                     player.move(move_x, move_y)
+                    pygame.time.set_timer(PLAYER_MOVE_EVENT, 150)
                 elif event.key == pygame.K_SPACE:
                     for sprite in Npc_group:
-                        if not isinstance(sprite, (Merchant, NPC)):
-                            pass
+                        if not isinstance(sprite, NPC):
+                            continue
                         if abs(sprite.pos_x - player.pos_x) <= 1 and abs(
                                 sprite.pos_y - player.pos_y) <= 1:
                             sprite.intro_dialog()
@@ -632,7 +639,7 @@ def set_configuration(param):
         player_image = load_image('icons/player.png')
 
 
-def sea_travel():
+def sea_travel(level_number):
     global current_city
     global level_0, level_x, level_y
     level_0 = -float("inf")
@@ -641,7 +648,8 @@ def sea_travel():
 
     set_configuration('sea')
     level = dict()
-    with open(f'data/{current_player}/sea_map_0.csv', mode='rt', encoding='utf-8') as csvfile:
+    with open(f'data/players/{current_player}/sea_map_{level_number}.csv', mode='rt',
+              encoding='utf-8') as csvfile:
         reader = csv.reader(csvfile, delimiter=';', quotechar='"')
         for line in reader:
             obj_name, obj_type, x, y = line
@@ -664,15 +672,19 @@ def sea_travel():
                 if event.key == pygame.K_LEFT and move_x != -1:
                     move_x = -1
                     player.move(move_x, move_y)
+                    pygame.time.set_timer(PLAYER_MOVE_EVENT, 150)
                 elif event.key == pygame.K_RIGHT and move_x != 1:
                     move_x = 1
                     player.move(move_x, move_y)
+                    pygame.time.set_timer(PLAYER_MOVE_EVENT, 150)
                 elif event.key == pygame.K_UP and move_y != -1:
                     move_y = -1
                     player.move(move_x, move_y)
+                    pygame.time.set_timer(PLAYER_MOVE_EVENT, 150)
                 elif event.key == pygame.K_DOWN and move_y != 1:
                     move_y = 1
                     player.move(move_x, move_y)
+                    pygame.time.set_timer(PLAYER_MOVE_EVENT, 150)
             elif event.type == pygame.KEYUP:
                 if event.key in (pygame.K_LEFT, pygame.K_RIGHT):
                     move_x = 0
@@ -699,6 +711,7 @@ def sea_travel():
             save_file(level)
 
         if current_city:
+            transfer(current_city)
             enter_city(current_city)
             current_city = ''
             set_configuration("sea")
@@ -728,6 +741,75 @@ def sea_travel():
     pygame.quit()
 
 
+def iNeedYou(event):
+    global info_text
+    try:
+        event.el.set_font_color_hover((93, 46, 32))
+        lines = ["Заработайте", str(int(event.el.get_value()) ** 3 * 10000), "монет"]
+        lines = [x.rjust(len("Заработайте"), ' ') for x in lines]
+        info_text.set_text('\n'.join(map(lambda x: x.rjust(len(lines[0]) // 2, ' '), lines)))
+
+        info_text.blit()
+        info_text.update()
+    except AttributeError:
+        pass
+
+
+def my_reaction():
+    global dropdownlist, menu
+    if dropdownlist.get_value() != '':
+        sea_travel(int(dropdownlist.get_value()))
+        print(f'sea_travel level {dropdownlist.get_value()} launched')
+
+
+def basic_styling(obj):
+    obj.set_font("data/icons/GorgeousPixel.ttf")
+    obj.set_main_color((252, 247, 165))
+    obj.set_font_size(50)
+    obj.scale_to_title()
+    try:
+        obj.set_font_color_hover((93, 46, 32))
+    except AttributeError:
+        obj.set_font_color((93, 46, 32))
+        obj.set_font("data/icons/GorgeousPixel.ttf")
+
+
+def main_menu():
+    global dropdownlist, info_text
+    pygame.init()
+    size = 500, 500
+    screen = pygame.display.set_mode(size)
+    text = thorpy.make_text("Выбери уровень")
+    basic_styling(text)
+
+    info_text = thorpy.Element()
+    info_text.set_main_color((252, 247, 165))
+    info_text.set_font_size(25)
+    info_text.set_font("data/icons/GorgeousPixel.ttf")
+    info_text.set_size((175, 70))
+    ddlist = thorpy.DropDownList(titles=[str(i) for i in range(9)])
+    ddlist.set_font("data/icons/GorgeousPixel.ttf")
+    ddlist.set_main_color((252, 247, 165))
+    ddlist.set_font_size(40)
+
+    dropdownlist = thorpy.DropDownListLauncher(const_text="level ",
+                                               var_text="",
+                                               titles=ddlist)
+    dropdownlist.add_reaction(thorpy.Reaction(reacts_to=thorpy.constants.THORPY_EVENT,
+                                              reac_func=iNeedYou,
+                                              event_args={"id": thorpy.constants.EVENT_DDL}))
+    basic_styling(dropdownlist)
+
+    btn_start = thorpy.make_button("start", my_reaction)
+    basic_styling(btn_start)
+
+    background = thorpy.Background(image='data\icons\menu.png',
+                                   elements=[text, dropdownlist, info_text, btn_start])
+    thorpy.store(background, align="center")
+    menu = thorpy.Menu(background)
+    menu.play()
+
+
 current_player = start_screen()
 
 # Загрузка файлов игры
@@ -748,4 +830,4 @@ tile_images = {
     'empty': load_image('icons/road.png')
 }
 player_image = load_image('icons/player.png')
-sea_travel()
+main_menu()

@@ -23,7 +23,7 @@ class Login(QMainWindow, Ui_MainWindow):
         result = cur.execute("SELECT * FROM users WHERE name=?",
                              (self.lineEdit.text(),)).fetchall()
         if not result:
-            cur.execute('INSERT INTO users(name, level, score, money) VALUES(?,0,0,10000)',
+            cur.execute('INSERT INTO users(name, level, money) VALUES(?,0,10000)',
                         (self.lineEdit.text(),))
             name_id = cur.execute('SELECT id FROM users WHERE name=?',
                                   (self.lineEdit.text(),)).fetchone()
@@ -38,7 +38,7 @@ class Login(QMainWindow, Ui_MainWindow):
             path = os.path.abspath('data')
             for file in os.listdir('data/basic_profile'):
                 os.system(
-                    f'copy "{path}\\basic_profile\\{file}" "{path}\\{current_player}\\{file}"')
+                    f'copy "{path}\\basic_profile\\{file}" "{path}\\players\\{current_player}\\{file}"')
             self.close()
         else:
             password = cur.execute('SELECT password FROM passwords '
@@ -47,7 +47,7 @@ class Login(QMainWindow, Ui_MainWindow):
                                    'WHERE name = ?)',
                                    (self.lineEdit.text(),)).fetchone()
             if str(password[0]) == self.lineEdit_2.text():
-                cur.execute('UPDATE users SET score=0, level=0 WHERE name=?',
+                cur.execute('UPDATE users SET level=0 WHERE name=?',
                             (self.lineEdit.text(),))
                 con.commit()
                 current_player = self.lineEdit.text()
@@ -102,7 +102,6 @@ def start_screen():
     text_y = 315
     screen.blit(text, (text_x, text_y))
     app = QApplication(sys.argv)
-    sys.excepthook = except_hook
     login = Login()
     while True:
         for event in pygame.event.get():
@@ -115,10 +114,3 @@ def start_screen():
                     return current_player
         pygame.display.flip()
         clock.tick(FPS)
-
-
-def except_hook(a, b, c):
-    sys.__excepthook__(a, b, c)
-
-
-start_screen()
