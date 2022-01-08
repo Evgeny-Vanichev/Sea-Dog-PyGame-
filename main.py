@@ -638,7 +638,7 @@ def set_configuration(param):
     if param == "sea":
         screen.fill((153, 217, 234))
         tile_images = {
-            'pirate': load_image('icons/pirate_flag.jpg'),
+            'pirate': load_image('icons/pirate_water.png'),
             'empty': load_image('icons/sea_tile.png'),
             'island': load_image('icons/road.png')
         }
