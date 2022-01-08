@@ -6,6 +6,7 @@ from pirate_test import *
 import thorpy
 from start_screen import *
 from transfer import *
+from level_completed import *
 
 FPS = 50
 # Предварительная инициализация pygame
@@ -161,7 +162,6 @@ class Player(pygame.sprite.Sprite):
                 self.left = False
 
     def move(self, dx, dy):
-        print(self.pos_x, self.pos_y)
         self.dx = dx
         self.pos_x += dx
         self.pos_y += dy
@@ -724,7 +724,14 @@ def sea_travel(level_number):
                 move_x = move_y = 0
             elif pygame.sprite.spritecollideany(player, pirate_group):
                 test = PirateTest(0)
-                test.launch_game()
+                if not test.launch_game():
+                    con = sqlite3.connect("data/login_db.db")
+                    con.cursor().execute(
+                        f"""UPDATE users
+                            SET money = money * 0.9
+                            WHERE name = '{current_player}'""")
+                    con.commit()
+                    inventory.clear()
                 player.move(0, -1)
                 level['player'] = ('player', player.pos_x * 50, player.pos_y * 50)
                 move_x = move_y = 0
