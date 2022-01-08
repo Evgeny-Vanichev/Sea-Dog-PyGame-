@@ -34,11 +34,6 @@ class Login(QMainWindow, Ui_MainWindow):
             print(x)
             con.commit()
             current_player = self.lineEdit.text()
-            os.mkdir(f'data/{current_player}')
-            path = os.path.abspath('data')
-            for file in os.listdir('data/basic_profile'):
-                os.system(
-                    f'copy "{path}\\basic_profile\\{file}" "{path}\\players\\{current_player}\\{file}"')
             self.close()
         else:
             password = cur.execute('SELECT password FROM passwords '
@@ -47,9 +42,6 @@ class Login(QMainWindow, Ui_MainWindow):
                                    'WHERE name = ?)',
                                    (self.lineEdit.text(),)).fetchone()
             if str(password[0]) == self.lineEdit_2.text():
-                cur.execute('UPDATE users SET level=0 WHERE name=?',
-                            (self.lineEdit.text(),))
-                con.commit()
                 current_player = self.lineEdit.text()
                 self.close()
             else:
@@ -88,9 +80,9 @@ def start_screen():
 
     fon = pygame.transform.scale(load_image('icons/background.jpg'), (663, 520))
     screen.blit(fon, (0, 0))
-    font = pygame.font.Font(None, 70)
-    name = font.render("Игра <<Sea Dog>>", True, (10, 20, 80))
-    name_x = 40
+    font = pygame.font.Font('data/icons/GorgeousPixel.ttf', 70)
+    name = font.render("Sea Dog", True, (10, 20, 80))
+    name_x = 120
     name_y = 50
     screen.blit(name, (name_x, name_y))
     image = load_image("icons/big_player.png")

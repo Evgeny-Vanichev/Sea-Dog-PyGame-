@@ -45,7 +45,7 @@ def transfer(city_name):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 return
-            if event.type == pygame.MOUSEBUTTONDOWN:
+            if event.type in (pygame.MOUSEBUTTONDOWN, pygame.KEYDOWN):
                 return
         pygame.display.flip()
         clock.tick(FPS)

@@ -1,57 +1,19 @@
 import csv
-import os
-import sqlite3
-import sys
-
 from pirate_test import *
-
-import pygame
 import thorpy
 from start_screen import *
 from transfer import *
 
 FPS = 50
-# Изображение не получится загрузить
-# без предварительной инициализации pygame
+# Предварительная инициализация pygame
 pygame.init()
 SIZE = WIDTH, HEIGHT = 500, 500
 screen = pygame.display.set_mode(SIZE)
 clock = pygame.time.Clock()
 
 
-def load_items():
-    global current_city, inventory
-    with open(f'data/players/{current_player}/inventory.csv', mode='rt',
-              encoding='utf8') as csvfile:
-        reader = csv.reader(csvfile, delimiter=';', quotechar='"')
-        for line in reader:
-            inventory[line[0]] = int(line[1])
-    with open(f'data/players/{current_player}/progress.txt', mode='rt', encoding='utf8') as file:
-        current_city = file.readline().strip('\n')
-
-
-def save_items():
-    global money
-    with open(f'data/players/{current_player}/inventory.csv', mode='wt', encoding='utf8',
-              newline='') as csvfile:
-        writer = csv.writer(csvfile, delimiter=';', quotechar='"')
-        for key, value in inventory.items():
-            writer.writerow([key, value])
-
-    with open(f'data/players/{current_player}/progress.txt', mode='wt', encoding='utf8') as file:
-        file.write(current_city)
-
-
-def save_file(level):
-    with open(f'data/players/{current_player}/sea_map_0.csv', mode='wt', encoding='utf-8',
-              newline='') as csvfile:
-        writer = csv.writer(csvfile, delimiter=';', quotechar='"')
-        for key, value in level.items():
-            writer.writerow([key, *value])
-
-
 def terminate():
-    save_items()
+    # save_items()
     pygame.quit()
     sys.exit()
 
@@ -196,23 +158,23 @@ def draw_text(text, x, y, foreground=(255, 255, 255), background=(0, 0, 0), surf
     surface.blit(text, (x + 5, y + 5))
 
 
-def create_button(text, func, surface, size=(80, 30), align=('right', 0.1)):
+def create_button(text, func, surface, h_w=(80, 30), align=('right', 0.1)):
     button = thorpy.Clickable(text)
-    painter = thorpy.painters.optionnal.human.Human(size=size,
+    painter = thorpy.painters.optionnal.human.Human(size=h_w,
                                                     radius_ext=0.5,
                                                     radius_int=0.4,
-                                                    border_color=(93, 46, 32),
+                                                    border_color=(95, 45, 30),
                                                     color=(255, 220, 130))
     button.set_painter(painter)
     button.finish()
-    button.set_font_color_hover((93, 46, 32))
+    button.set_font_color_hover((95, 45, 30))
     button.user_func = func
     button.surface = surface
     if align[0] == 'right':
         x = WIDTH * 0.75
     else:
         x = WIDTH * 0.25
-    button.set_center((x, HEIGHT * align[1] + size[1] // 2))
+    button.set_center((x, HEIGHT * align[1] + h_w[1] // 2))
     button.blit()
     button.update()
 
@@ -292,6 +254,10 @@ class NPC(pygame.sprite.Sprite):
 class Merchant(NPC):
     def __init__(self, npc_number, pos_x, pos_y):
         super().__init__(npc_number, "merchant", pos_x, pos_y)
+        self.money_left = None
+        self.con_taisia_db = sqlite3.connect(
+            'data/login_db.db')  # !!! ТУТ НУЖНО УКАЗАТЬ СВОЙ ПУТЬ ДО login_db.db
+        self.cur_taisia_db = self.con_taisia_db.cursor()
         self.text_ok = "Магазин"
         self.inserters = []
         f = open(f'data/cities/{current_city}/{self.number}_shop.txt', encoding='utf-8')
@@ -322,9 +288,6 @@ class Merchant(NPC):
         coin_image.blit()
         coin_image.update()
 
-        self.con_taisia_db = sqlite3.connect(
-            'data/login_db.db')  # !!! ТУТ НУЖНО УКАЗАТЬ СВОЙ ПУТЬ ДО login_db.db
-        self.cur_taisia_db = self.con_taisia_db.cursor()
         self.money_left = \
             self.cur_taisia_db.execute(
                 f"SELECT money FROM users WHERE name='{current_player}'").fetchone()[0]
@@ -358,15 +321,14 @@ class Merchant(NPC):
                 menu.react(event)
             pygame.display.flip()
             screen.blit(screen2, (0, 0))
-            coin_image.blit()  # by Taisia
-            self.money_text.blit()  # by Taisia
+            coin_image.blit()
+            self.money_text.blit()
             clock.tick(FPS)
 
     def purchase_items(self):
         global inventory
         temp = inventory.copy()
         total = 0
-
         try:
             for txt_box, good in zip(self.inserters, self.shop):
                 amount = int(txt_box.get_value())
@@ -377,16 +339,30 @@ class Merchant(NPC):
                     temp[good] = temp.get(good, 0) + amount
 
             if total > self.money_left:
-                raise ValueError
+                raise AttributeError
+            if sum(temp.values()) > 10:
+                raise IndexError
             self.money_left -= total
             self.cur_taisia_db.execute(f'UPDATE users SET money=? WHERE name="{current_player}"',
                                        (self.money_left,))
             self.con_taisia_db.commit()
             inventory = temp.copy()
-            save_items()
+            # save_items()
         except ValueError:
             thorpy.launch_blocking_alert(title="Ошибка!",
                                          text="Некорректные данные! Попробуйте снова",
+                                         parent=None,
+                                         ok_text="Я больше так не буду!")
+            return
+        except AttributeError:
+            thorpy.launch_blocking_alert(title="Ошибка!",
+                                         text="У вас недостаточно денег!",
+                                         parent=None,
+                                         ok_text="Я больше так не буду!")
+            return
+        except IndexError:
+            thorpy.launch_blocking_alert(title="Ошибка!",
+                                         text="Ваш корабль столько не увезёт!",
                                          parent=None,
                                          ok_text="Я больше так не буду!")
             return
@@ -501,7 +477,7 @@ class Buyer(NPC):
                                        (self.money_left,))
             self.con_taisia_db.commit()
             inventory = temp.copy()
-            save_items()
+            # save_items()
         except ValueError:
             thorpy.launch_blocking_alert(title="Ошибка!",
                                          text="Некорректные данные! Попробуйте снова",
@@ -537,12 +513,13 @@ class Camera:
             self.dy = -(target.rect.y + target.rect.h // 2 - HEIGHT // 2)
 
 
-def enter_city(city_name):
+def enter_city(time):
     set_configuration("city")
 
     global player, level_0, level_x, level_y
+
     level_0 = 0
-    level = load_level('cities/' + city_name + '/city.txt')
+    level = load_level('cities/' + current_city + '/city.txt')
     player, level_x, level_y = generate_level(level)
     PLAYER_MOVE_EVENT = pygame.USEREVENT + 1
     move_x, move_y = 0, 0
@@ -583,7 +560,7 @@ def enter_city(city_name):
             elif event.type == PLAYER_MOVE_EVENT:
                 player.move(move_x, move_y)
         if player.pos_y == level_y:
-            return
+            return time
 
         # изменяем ракурс камеры
         camera.update(player)
@@ -600,8 +577,15 @@ def enter_city(city_name):
                 draw_text('нажмите space для диалога',
                           sprite.rect.x - tile_width // 2,
                           sprite.rect.y - tile_height // 2)
+
+        font = pygame.font.Font(None, 15)
+        text = font.render(str((time // 1000) // 60) + ':' + str((time // 1000) % 60), True,
+                           (0, 0, 0))
+        text_x = 20
+        text_y = 30
+        screen.blit(text, (text_x, text_y))
+        time += clock.tick(FPS)
         pygame.display.flip()
-        clock.tick(FPS)
 
 
 def set_configuration(param):
@@ -648,7 +632,8 @@ def sea_travel(level_number):
 
     set_configuration('sea')
     level = dict()
-    with open(f'data/players/{current_player}/sea_map_{level_number}.csv', mode='rt',
+    time = -7900
+    with open(f'data/basic_profile/sea_map_{level_number}.csv', mode='rt',
               encoding='utf-8') as csvfile:
         reader = csv.reader(csvfile, delimiter=';', quotechar='"')
         for line in reader:
@@ -708,36 +693,46 @@ def sea_travel(level_number):
                 move_x = move_y = 0
             else:
                 level['player'] = ('player', player.pos_x * 50, player.pos_y * 50)
-            save_file(level)
 
         if current_city:
             transfer(current_city)
-            enter_city(current_city)
+            time += enter_city(time)
             current_city = ''
             set_configuration("sea")
             player = generate_sea_map(level)
             level_0 = -float("inf")
             level_x = float("inf")
             level_y = float("inf")
+            con = sqlite3.connect("data/login_db.db")
+            if con.cursor().execute(
+                    f"SELECT money FROM users WHERE name='{current_player}'").fetchone()[
+                    0] >= level_number ** 3 * 10000:
+                level_completed()
+                return True
 
         camera.update(player, ignore_borders=True)
         for sprite in all_sprites:
             camera.apply(sprite)
 
-        screen.fill((153, 217, 234))
+        screen.fill((155, 215, 235))
         tiles_group.draw(screen)
         player_group.draw(screen)
         font = pygame.font.Font(None, 15)
         text = font.render('X: ' + str(player.pos_x * tile_width), True, (0, 0, 0))
-        text_x = 10
+        text_x = 20
         text_y = 10
         screen.blit(text, (text_x, text_y))
         text = font.render('Y: ' + str(player.pos_y * tile_height), True, (0, 0, 0))
-        text_x = 10
+        text_x = 20
         text_y = 20
         screen.blit(text, (text_x, text_y))
+        text = font.render('%02d:%02d' % ((time // 1000) // 60, (time // 1000) % 60),
+                           True, (0, 0, 0))
+        text_x = 20
+        text_y = 30
+        screen.blit(text, (text_x, text_y))
         pygame.display.flip()
-
+        time += clock.tick(FPS)
     pygame.quit()
 
 
@@ -745,10 +740,18 @@ def iNeedYou(event):
     global info_text
     try:
         event.el.set_font_color_hover((93, 46, 32))
-        lines = ["Заработайте", str(int(event.el.get_value()) ** 3 * 10000), "монет"]
-        lines = [x.rjust(len("Заработайте"), ' ') for x in lines]
-        info_text.set_text('\n'.join(map(lambda x: x.rjust(len(lines[0]) // 2, ' '), lines)))
 
+        level = int(dropdownlist.get_value())
+        con = sqlite3.connect("data/login_db.db")
+        max_level = con.cursor().execute(
+            f"""SELECT level FROM users
+                WHERE name = '{current_player}'""").fetchone()[0]
+        if level > max_level:
+            lines = "Завершите предыдущие уровни".split()
+        else:
+            lines = ["Заработайте", str(int(event.el.get_value()) ** 3 * 10000), "монет"]
+        lines = [x.rjust(len(lines[0]), ' ') for x in lines]
+        info_text.set_text('\n'.join(map(lambda x: x.rjust(len(lines[0]) // 2, ' '), lines)))
         info_text.blit()
         info_text.update()
     except AttributeError:
@@ -758,8 +761,21 @@ def iNeedYou(event):
 def my_reaction():
     global dropdownlist, menu
     if dropdownlist.get_value() != '':
-        sea_travel(int(dropdownlist.get_value()))
-        print(f'sea_travel level {dropdownlist.get_value()} launched')
+        level = int(dropdownlist.get_value())
+        con = sqlite3.connect("data/login_db.db")
+        max_level = con.cursor().execute(
+            f"""SELECT level FROM users
+                WHERE name = '{current_player}'""").fetchone()[0]
+        if level > max_level:
+            return
+        con.cursor().execute(f"UPDATE users SET money={5000} "
+                             f"WHERE name='{current_player}'")
+        con.commit()
+        if sea_travel(level) and level == max_level:
+            con.cursor().execute(f"UPDATE users SET level={max_level + 1} "
+                                 f"WHERE name='{current_player}'")
+            con.commit()
+        menu.play()
 
 
 def basic_styling(obj):
@@ -775,7 +791,7 @@ def basic_styling(obj):
 
 
 def main_menu():
-    global dropdownlist, info_text
+    global dropdownlist, info_text, menu
     pygame.init()
     size = 500, 500
     screen = pygame.display.set_mode(size)
@@ -787,7 +803,7 @@ def main_menu():
     info_text.set_font_size(25)
     info_text.set_font("data/icons/GorgeousPixel.ttf")
     info_text.set_size((175, 70))
-    ddlist = thorpy.DropDownList(titles=[str(i) for i in range(9)])
+    ddlist = thorpy.DropDownList(titles=[str(i) for i in range(5)])
     ddlist.set_font("data/icons/GorgeousPixel.ttf")
     ddlist.set_main_color((252, 247, 165))
     ddlist.set_font_size(40)
@@ -811,23 +827,13 @@ def main_menu():
 
 
 current_player = start_screen()
-
-# Загрузка файлов игры
 money = 0
 current_city = ''
 inventory = dict()
-load_items()
-
-# группы спрайтов
-all_sprites = pygame.sprite.Group()
-tiles_group = pygame.sprite.Group()
-walls_group = pygame.sprite.Group()
-player_group = pygame.sprite.Group()
 camera = Camera()
 tile_width = tile_height = 50
 tile_images = {
     'wall': load_image('icons/house.png'),
     'empty': load_image('icons/road.png')
 }
-player_image = load_image('icons/player.png')
 main_menu()

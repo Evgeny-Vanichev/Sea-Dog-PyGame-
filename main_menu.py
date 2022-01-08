@@ -32,8 +32,9 @@ def iNeedYou(event):
 def my_reaction():
     global dropdownlist, menu
     if dropdownlist.get_value() != '':
-        # sea_travel(int(dropdownlist.get_value()))
         print(f'sea_travel level {dropdownlist.get_value()} launched')
+        # sea_travel(int(dropdownlist.get_value()))
+        # menu.play()
 
 
 def basic_styling(obj):
@@ -82,6 +83,5 @@ def main_menu():
     thorpy.store(background, align="center")
     menu = thorpy.Menu(background)
     menu.play()
-
 
 main_menu()
