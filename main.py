@@ -745,7 +745,7 @@ def sea_travel(level_number):
                     f"SELECT money FROM users WHERE name='{current_player}'").fetchone()[
                     0]
             if total_money >= level_number ** 3 * 10000:
-                level_completed(total_money, time, current_player)
+                level_completed(total_money, time, current_player, level_number)
                 return True
 
         camera.update(player, ignore_borders=True)

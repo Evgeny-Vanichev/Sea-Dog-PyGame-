@@ -79,4 +79,3 @@ def level_completed(money, time, current_player, level):
         pygame.display.flip()
 
 
-level_completed(12000, 100000, "admin", 1)
