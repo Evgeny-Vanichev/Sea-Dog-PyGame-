@@ -1,4 +1,7 @@
 import csv
+
+import pygame.event
+
 from pirate_test import *
 import thorpy
 from start_screen import *
@@ -60,7 +63,7 @@ def generate_level(level):
                 player_x, player_y = x, y
             elif level[y][x] in '123456789':
                 create_npc(level[y][x], x, y)
-    new_player = Player(player_x, player_y)
+    new_player = Player(1, 7, player_x, player_y)
     # вернем игрока, а также размер поля в клетках
     return new_player, x, y
 
@@ -70,7 +73,7 @@ def generate_sea_map(level):
     for obj in level:
         obj_type, x, y = level[obj]
         if obj_type == 'player':
-            new_player = Player(x // 50, y // 50)
+            new_player = Player(1, 1, x // 50, y // 50)
         else:
             Tile(obj_type, x // 50, y // 50)
     return new_player
@@ -106,14 +109,43 @@ class Tile(pygame.sprite.Sprite):
 
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, pos_x, pos_y):
-        super().__init__(player_group, all_sprites)
-        self.pos_x, self.pos_y = pos_x, pos_y
-        self.image = player_image
+    def __init__(self, columns, rows, pos_x, pos_y):
+        super().__init__(all_sprites, player_group)
+        self.delta = 5
+        self.pos_x = pos_x
+        self.pos_y = pos_y
+        self.dx = 0
         self.left = True
-        self.rect = self.image.get_rect().move(
-            tile_width * pos_x + (tile_width - self.image.get_width()) // 2,
-            tile_height * pos_y + 1)
+        self.moving = False
+        self.change_image(columns, rows)
+        self.rect = self.image.get_rect().move(tile_width * self.pos_x, tile_height * self.pos_y)
+        self.rect = self.rect.move((tile_width - self.rect.width) // 2, 0)
+
+    def change_image(self, columns, rows):
+        self.frames = []
+        self.cut_sheet(player_image, columns, rows)
+        self.cur_frame = 0
+        self.image = self.frames[self.cur_frame]
+        self.rect = self.image.get_rect().move(tile_width * self.pos_x, tile_height * self.pos_y)
+        self.rect = self.rect.move((tile_width - self.rect.width) // 2, 0)
+
+    def cut_sheet(self, sheet, columns, rows):
+        self.rect = pygame.Rect(0, 0, sheet.get_width() // columns,
+                                sheet.get_height() // rows)
+        for j in range(rows):
+            for i in range(columns):
+                frame_location = (self.rect.w * i, self.rect.h * j)
+                self.frames.append(sheet.subsurface(pygame.Rect(
+                    frame_location, self.rect.size)))
+
+    def update(self):
+        if self.moving:
+            self.delta = (self.delta + 1) % 5
+            if self.delta == 0:
+                self.cur_frame = (self.cur_frame + 1) % len(self.frames)
+                self.image = self.frames[self.cur_frame]
+                self.left = True
+                self.turn_over(self.dx)
 
     def turn_over(self, dx):
         if dx == 0:
@@ -129,10 +161,12 @@ class Player(pygame.sprite.Sprite):
                 self.left = False
 
     def move(self, dx, dy):
-        self.turn_over(dx)
+        print(self.pos_x, self.pos_y)
+        self.dx = dx
         self.pos_x += dx
         self.pos_y += dy
         self.rect = self.rect.move(dx * tile_width, dy * tile_height)
+        self.moving = (dx, dy) != (0, 0)
         try:
             if not (level_0 <= self.pos_x <= level_x and level_0 <= self.pos_y <= level_y):
                 raise IndexError
@@ -559,6 +593,7 @@ def enter_city(time):
                     move_y = 0
             elif event.type == PLAYER_MOVE_EVENT:
                 player.move(move_x, move_y)
+        player.update()
         if player.pos_y == level_y:
             return time
 
@@ -579,8 +614,8 @@ def enter_city(time):
                           sprite.rect.y - tile_height // 2)
 
         font = pygame.font.Font(None, 15)
-        text = font.render(str((time // 1000) // 60) + ':' + str((time // 1000) % 60), True,
-                           (0, 0, 0))
+        text = font.render('%02d:%02d' % ((time // 1000) // 60, (time // 1000) % 60),
+                           True, (0, 0, 0))
         text_x = 20
         text_y = 30
         screen.blit(text, (text_x, text_y))
@@ -620,7 +655,7 @@ def set_configuration(param):
         Npc_group = pygame.sprite.Group()
         tile_images['wall'] = load_image('icons/house.png')
         tile_images['empty'] = load_image('icons/road.png')
-        player_image = load_image('icons/player.png')
+        player_image = load_image('icons/player_sheet.png')
 
 
 def sea_travel(level_number):
@@ -647,7 +682,9 @@ def sea_travel(level_number):
     PLAYER_MOVE_EVENT = pygame.USEREVENT + 1
     move_x, move_y = 0, 0
     pygame.time.set_timer(PLAYER_MOVE_EVENT, 150)
-
+    global player_image
+    player_image = load_image("icons/ship.png")
+    player.change_image(1, 1)
     while running:
         for event in pygame.event.get():
             all_sprites.draw(screen)
@@ -704,10 +741,11 @@ def sea_travel(level_number):
             level_x = float("inf")
             level_y = float("inf")
             con = sqlite3.connect("data/login_db.db")
-            if con.cursor().execute(
+            total_money = con.cursor().execute(
                     f"SELECT money FROM users WHERE name='{current_player}'").fetchone()[
-                    0] >= level_number ** 3 * 10000:
-                level_completed()
+                    0]
+            if total_money >= level_number ** 3 * 10000:
+                level_completed(total_money, time, current_player)
                 return True
 
         camera.update(player, ignore_borders=True)
@@ -715,6 +753,7 @@ def sea_travel(level_number):
             camera.apply(sprite)
 
         screen.fill((155, 215, 235))
+        player.update()
         tiles_group.draw(screen)
         player_group.draw(screen)
         font = pygame.font.Font(None, 15)
