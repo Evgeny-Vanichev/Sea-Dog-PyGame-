@@ -336,6 +336,12 @@ class Merchant(NPC):
         central_box.set_topleft((50, 50))
         central_box.add_lift()
 
+        text_inventory = f"Места в инвентаре: {10 - sum(inventory.values())}" # by Taisia
+        text_inventory = thorpy.make_text(text_inventory, font_size=10, font_color=(0, 0, 0)) # by Taisia
+        text_inventory.set_topleft((25, 5)) # by Taisia
+        text_inventory.blit() # by Taisia
+        text_inventory.update() # by Taisia
+
         menu = thorpy.Menu(central_box)
         for element in menu.get_population():
             element.surface = screen2
@@ -357,6 +363,7 @@ class Merchant(NPC):
             screen.blit(screen2, (0, 0))
             coin_image.blit()
             self.money_text.blit()
+            text_inventory.blit()
             clock.tick(FPS)
 
     def purchase_items(self):
