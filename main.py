@@ -336,6 +336,12 @@ class Merchant(NPC):
         central_box.set_topleft((50, 50))
         central_box.add_lift()
 
+        text_inventory = f"Места в инвентаре: {10 - sum(inventory.values())}" # by Taisia
+        text_inventory = thorpy.make_text(text_inventory, font_size=10, font_color=(0, 0, 0)) # by Taisia
+        text_inventory.set_topleft((25, 5)) # by Taisia
+        text_inventory.blit() # by Taisia
+        text_inventory.update() # by Taisia
+
         menu = thorpy.Menu(central_box)
         for element in menu.get_population():
             element.surface = screen2
@@ -357,6 +363,7 @@ class Merchant(NPC):
             screen.blit(screen2, (0, 0))
             coin_image.blit()
             self.money_text.blit()
+            text_inventory.blit()
             clock.tick(FPS)
 
     def purchase_items(self):
@@ -553,6 +560,10 @@ def enter_city(time):
     player, level_x, level_y = generate_level(level)
     PLAYER_MOVE_EVENT = pygame.USEREVENT + 1
     move_x, move_y = 0, 0
+
+    image = load_image("icons/inv_button.png")
+    screen.blit(image, (440, 5))
+
     pygame.time.set_timer(PLAYER_MOVE_EVENT, 150)
     while True:
         for event in pygame.event.get():
@@ -675,6 +686,9 @@ def sea_travel(level_number):
     camera = Camera()
     running = True
 
+    image = load_image("icons/inv_button.png") # Taisia вставила иконку инвентаря
+    screen.blit(image, (400, 5)) # Taisia вставила иконку инвентаря
+
     PLAYER_MOVE_EVENT = pygame.USEREVENT + 1
     move_x, move_y = 0, 0
     pygame.time.set_timer(PLAYER_MOVE_EVENT, 150)
@@ -686,6 +700,9 @@ def sea_travel(level_number):
             all_sprites.draw(screen)
             if event.type == pygame.QUIT:
                 terminate()
+            if event.type == pygame.MOUSEBUTTONDOWN: # Taisia вставила иконку инвентаря
+                if 400 <= event.pos[0] <= 500 and 5 <= event.pos[1] <= 60: # Taisia вставила иконку инвентаря
+                    return # Taisia вставила иконку инвентаря, тут надо запустить функцию из кода inventory.py
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_LEFT and move_x != -1:
                     move_x = -1
@@ -757,6 +774,7 @@ def sea_travel(level_number):
 
         screen.fill((155, 215, 235))
         player.update()
+        screen.blit(image, (400, 5)) # Taisia вставила иконку инвентаря
         tiles_group.draw(screen)
         player_group.draw(screen)
         font = pygame.font.Font(None, 15)
