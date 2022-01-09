@@ -2,6 +2,7 @@ import csv
 
 import pygame.event
 
+from inventory import *
 from pirate_test import *
 import thorpy
 from start_screen import *
@@ -62,6 +63,8 @@ def generate_level(level):
                 Tile('wall', x, y)
             elif level[y][x] == '@':
                 player_x, player_y = x, y
+            elif level[y][x] == '*':
+                Tile('chest', x, y)
             elif level[y][x] in '123456789':
                 create_npc(level[y][x], x, y)
     new_player = Player(1, 7, player_x, player_y)
@@ -81,7 +84,6 @@ def generate_sea_map(level):
 
 
 def create_npc(number, x, y):
-    """NPC(level[y][x], x, y)"""
     con = sqlite3.connect("data/npc/npc.db")
     npc_type = con.cursor().execute(
         f"""SELECT function FROM functions
@@ -90,6 +92,8 @@ def create_npc(number, x, y):
         Merchant(number, x, y)
     elif npc_type == 'buyer':
         Buyer(number, x, y)
+    elif npc_type == 'quest':
+        Quest(number, x, y)
     else:
         NPC(number, npc_type, x, y)
 
@@ -102,6 +106,8 @@ class Tile(pygame.sprite.Sprite):
             super().__init__(island_group, tiles_group, all_sprites)
         elif tile_type == 'pirate':
             super().__init__(pirate_group, tiles_group, all_sprites)
+        elif tile_type == 'chest':
+            super().__init__(treasure_group, tiles_group, all_sprites)
         else:
             super().__init__(tiles_group, all_sprites)
         self.image = tile_images[tile_type]
@@ -232,6 +238,18 @@ def get_good_info(good):
     return [str(x) for x in list(*result)]
 
 
+def dialog(lines):
+    screen2 = pygame.Surface((WIDTH, HEIGHT * 0.5))
+    screen2.fill((250, 230, 180))
+    font = pygame.font.Font(None, 25)
+    for i, line in enumerate(lines):
+        text = font.render(line, True, (0, 0, 0))
+        text_x = (WIDTH - text.get_width()) // 2
+        text_y = HEIGHT * 0.1 + 30 * i
+        screen2.blit(text, (text_x, text_y))
+    return screen2
+
+
 class NPC(pygame.sprite.Sprite):
     def __init__(self, npc_number, npc_type, pos_x, pos_y):
         super().__init__(all_sprites, Npc_group)
@@ -336,11 +354,12 @@ class Merchant(NPC):
         central_box.set_topleft((50, 50))
         central_box.add_lift()
 
-        text_inventory = f"Места в инвентаре: {10 - sum(inventory.values())}" # by Taisia
-        text_inventory = thorpy.make_text(text_inventory, font_size=10, font_color=(0, 0, 0)) # by Taisia
-        text_inventory.set_topleft((25, 5)) # by Taisia
-        text_inventory.blit() # by Taisia
-        text_inventory.update() # by Taisia
+        text_inventory = f"Места в инвентаре: {10 - sum(inventory.values())}"  # by Taisia
+        text_inventory = thorpy.make_text(text_inventory, font_size=10,
+                                          font_color=(0, 0, 0))  # by Taisia
+        text_inventory.set_topleft((25, 5))  # by Taisia
+        text_inventory.blit()  # by Taisia
+        text_inventory.update()  # by Taisia
 
         menu = thorpy.Menu(central_box)
         for element in menu.get_population():
@@ -531,6 +550,112 @@ class Buyer(NPC):
         self.open_shop()
 
 
+class Quest(NPC):
+    def __init__(self, number, pos_x, pos_y):
+        super().__init__(number, "quest", pos_x, pos_y)
+        self.text_ok = "Я готов"
+        self.text_bye = "Не сегодня"
+
+    def confirm(self):
+        global inventory
+        temp = inventory.copy()
+        for key in self.task:
+            if temp.get(key, 0) >= self.task[key]:
+                temp[key] -= self.task[key]
+            else:
+                self.value_got = False
+                self.finish_dialog()
+                return
+        else:
+            inventory = temp.copy()
+            self.value_got = True
+            self.finish_dialog()
+
+    def start_dialog(self):
+        self.flag = False
+        global quests, inventory
+        progress = quests[(current_city, self.number)] = quests.get((current_city, self.number), 0)
+        if progress == -1:
+            screen.blit(dialog(["Ты мне уже помог", "Спасибо!"]), (0, 0))
+            while True:
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        terminate()
+                    elif event.type in (pygame.MOUSEBUTTONDOWN, pygame.KEYDOWN):
+                        return
+                pygame.display.flip()
+                clock.tick(FPS)
+        if progress != 0:
+            with open(f'data/quests/{current_city}/{self.number}/{progress}/move.csv',
+                      mode='rt', encoding='utf-8') as csvfile:
+                reader = csv.reader(csvfile, delimiter=';', quotechar='"')
+                self.task = dict()
+                for line in reader:
+                    value, amount = line
+                    self.task[value] = int(amount)
+                screen2 = dialog(["Ты правда хочешь мне отдать: "] +
+                                 [' '.join(line) for line in self.task])
+                btn_ok = create_button("Да", self.confirm, screen2, align=('left', 0.4))
+                btn_cancel = create_button("Нет", self.finish_dialog, screen2, align=('right', 0.4))
+                self.flag = True
+                self.value_got = False
+                while self.flag:
+                    for event in pygame.event.get():
+                        if event.type == pygame.QUIT:
+                            terminate()
+                        btn_ok.react(event)
+                        btn_cancel.react(event)
+                    screen.blit(screen2, (0, 0))
+                    pygame.display.flip()
+                    clock.tick(FPS)
+                if not self.value_got:
+                    screen2 = dialog(["Вернись, как раздобудешь все!"])
+                    screen.blit(screen2, (0, 0))
+                    while True:
+                        for event in pygame.event.get():
+                            if event.type == pygame.QUIT:
+                                terminate()
+                            elif event.type in (pygame.MOUSEBUTTONDOWN, pygame.KEYDOWN):
+                                return
+                        pygame.display.flip()
+                        clock.tick(FPS)
+        with open(f'data/quests/{current_city}/{self.number}/{progress}/story.txt',
+                  mode='rt', encoding='utf-8') as file:
+            lines = file.read().split('\n')
+            for i in range(len(lines) // 2):
+                screen.blit(dialog([lines[2 * i], lines[2 * i + 1]]), (0, 0))
+                running = True
+                while running:
+                    for event in pygame.event.get():
+                        if event.type == pygame.QUIT:
+                            terminate()
+                        elif event.type in (pygame.MOUSEBUTTONDOWN, pygame.KEYDOWN):
+                            running = False
+                            break
+                    pygame.display.flip()
+                    pygame.time.Clock().tick(FPS)
+        try:
+            with open(f'data/quests/{current_city}/{self.number}/{progress}/reward.csv',
+                      mode='rt', encoding='utf-8') as csvfile:
+                reader = csv.reader(csvfile, delimiter=';', quotechar='"')
+                for line in reader:
+                    if line[0] == 'money':
+                        con = sqlite3.connect("data/login_db.db")
+                        con.cursor().execute(
+                            f"""UPDATE users
+                                SET money = money + {int(line[1])}
+                                WHERE name == '{current_player}'""")
+                        con.commit()
+                    else:
+                        inventory[line[0]] = inventory.get(line[0], 0) + int(line[1])
+            quests[(current_city, self.number)] = -1
+        except FileNotFoundError:
+            quests[(current_city, self.number)] += 1
+
+    def special_function(self):
+        self.start_dialog()
+
+
 class Camera:
     # зададим начальный сдвиг камеры
     def __init__(self):
@@ -552,18 +677,17 @@ class Camera:
 
 def enter_city(time):
     set_configuration("city")
-
-    global player, level_0, level_x, level_y
-
+    global player, level_0, level_x, level_y, inventory
     level_0 = 0
     level = load_level('cities/' + current_city + '/city.txt')
     player, level_x, level_y = generate_level(level)
+    level[player.pos_y][player.pos_x] = '.'
     PLAYER_MOVE_EVENT = pygame.USEREVENT + 1
     move_x, move_y = 0, 0
-
-    image = load_image("icons/inv_button.png")
-    screen.blit(image, (440, 5))
-
+    inv_btn = load_image("icons/inv_button.png")
+    quest_btn = load_image("icons/quest_button.png")
+    screen.blit(inv_btn, (400, 5))
+    screen.blit(quest_btn, (400, 50))
     pygame.time.set_timer(PLAYER_MOVE_EVENT, 150)
     while True:
         for event in pygame.event.get():
@@ -600,10 +724,20 @@ def enter_city(time):
                     move_y = 0
             elif event.type == PLAYER_MOVE_EVENT:
                 player.move(move_x, move_y)
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if 400 <= event.pos[0] <= 500:
+                    if 5 <= event.pos[1] <= 47:
+                        show_inventory(inventory)
+                    elif 48 <= event.pos[1] <= 90:
+                        show_quests(quests)
         player.update()
         if player.pos_y == level_y:
             return time
-
+        if pygame.sprite.spritecollideany(player, treasure_group):
+            set_configuration('city')
+            level[player.pos_y][player.pos_x] = '@'
+            player, level_x, level_y = generate_level(level)
+            inventory['Странное сокровище'] = inventory.get('Странное сокровище', 0) + 1
         # изменяем ракурс камеры
         camera.update(player)
         # обновляем положение всех спрайтов
@@ -626,6 +760,8 @@ def enter_city(time):
         text_x = 20
         text_y = 30
         screen.blit(text, (text_x, text_y))
+        screen.blit(inv_btn, (400, 5))
+        screen.blit(quest_btn, (400, 50))
         time += clock.tick(FPS)
         pygame.display.flip()
 
@@ -638,25 +774,29 @@ def set_configuration(param):
     global all_sprites
     global walls_group
     global pirate_group
+    global treasure_group
 
     global tile_images
     global player_image
 
+    all_sprites = pygame.sprite.Group()
+    player_group = pygame.sprite.Group()
+    tiles_group = pygame.sprite.Group()
+    island_group = pygame.sprite.Group()
+    Npc_group = pygame.sprite.Group()
+    walls_group = pygame.sprite.Group()
+    pirate_group = pygame.sprite.Group()
+    treasure_group = pygame.sprite.Group()
+
     if param == "sea":
         screen.fill((153, 217, 234))
         tile_images = {
+            'chest': load_image('icons/treasure.png'),
             'pirate': load_image('icons/pirate_water.png'),
             'empty': load_image('icons/sea_tile.png'),
             'island': load_image('icons/road.png')
         }
         player_image = load_image('icons/ship.png')
-        all_sprites = pygame.sprite.Group()
-        player_group = pygame.sprite.Group()
-        tiles_group = pygame.sprite.Group()
-        island_group = pygame.sprite.Group()
-        Npc_group = pygame.sprite.Group()
-        walls_group = pygame.sprite.Group()
-        pirate_group = pygame.sprite.Group()
 
     elif param == "city":
         Npc_group = pygame.sprite.Group()
@@ -686,8 +826,10 @@ def sea_travel(level_number):
     camera = Camera()
     running = True
 
-    image = load_image("icons/inv_button.png") # Taisia вставила иконку инвентаря
-    screen.blit(image, (400, 5)) # Taisia вставила иконку инвентаря
+    inv_btn = load_image("icons/inv_button.png")
+    quest_btn = load_image("icons/quest_button.png")
+    screen.blit(inv_btn, (400, 5))
+    screen.blit(quest_btn, (400, 50))
 
     PLAYER_MOVE_EVENT = pygame.USEREVENT + 1
     move_x, move_y = 0, 0
@@ -700,9 +842,12 @@ def sea_travel(level_number):
             all_sprites.draw(screen)
             if event.type == pygame.QUIT:
                 terminate()
-            if event.type == pygame.MOUSEBUTTONDOWN: # Taisia вставила иконку инвентаря
-                if 400 <= event.pos[0] <= 500 and 5 <= event.pos[1] <= 60: # Taisia вставила иконку инвентаря
-                    return # Taisia вставила иконку инвентаря, тут надо запустить функцию из кода inventory.py
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if 400 <= event.pos[0] <= 500:
+                    if 5 <= event.pos[1] <= 47:
+                        show_inventory(inventory)
+                    elif 48 <= event.pos[1] <= 90:
+                        show_quests(quests)
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_LEFT and move_x != -1:
                     move_x = -1
@@ -762,8 +907,8 @@ def sea_travel(level_number):
             level_y = float("inf")
             con = sqlite3.connect("data/login_db.db")
             total_money = con.cursor().execute(
-                    f"SELECT money FROM users WHERE name='{current_player}'").fetchone()[
-                    0]
+                f"SELECT money FROM users WHERE name='{current_player}'").fetchone()[
+                0]
             if total_money >= level_number ** 3 * 10000:
                 level_completed(total_money, time, current_player, level_number)
                 return True
@@ -774,7 +919,8 @@ def sea_travel(level_number):
 
         screen.fill((155, 215, 235))
         player.update()
-        screen.blit(image, (400, 5)) # Taisia вставила иконку инвентаря
+        screen.blit(inv_btn, (400, 5))
+        screen.blit(quest_btn, (400, 50))
         tiles_group.draw(screen)
         player_group.draw(screen)
         font = pygame.font.Font(None, 15)
@@ -887,13 +1033,14 @@ def main_menu():
 
 
 current_player = start_screen()
-money = 0
+quests = dict()
 current_city = ''
 inventory = dict()
 camera = Camera()
 tile_width = tile_height = 50
 tile_images = {
     'wall': load_image('icons/house.png'),
-    'empty': load_image('icons/road.png')
+    'empty': load_image('icons/road.png'),
+    'chest': load_image('icons/treasure.png')
 }
 main_menu()
