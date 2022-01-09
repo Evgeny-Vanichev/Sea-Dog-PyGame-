@@ -13,7 +13,7 @@ def terminate():
 
 
 def level_completed(money, time, current_player, level):
-    score = money * 6000 // time
+    score = int(money * 6000 * (1 + level / 100) // time)
     con = sqlite3.connect("data/login_db.db")
     player_id = con.cursor().execute(
         f"""SELECT id from users

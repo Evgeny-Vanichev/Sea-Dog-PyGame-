@@ -1,10 +1,8 @@
 import pygame
 import os
 import sys
-import csv
 
 FPS = 50
-current_player = None
 
 
 def load_image(name, colorkey=None):
@@ -21,21 +19,16 @@ def terminate():
     sys.exit()
 
 
-def inventory():
+def show_inventory(inventory):
     global size
     global screen
     global current_player
-
-    current_player = None
 
     pygame.init()
     size = width, height = 500, 500
     screen = pygame.display.set_mode(size)
 
     clock = pygame.time.Clock()
-
-    csv_file = open('data/basic_profile/inventory.csv', encoding='utf-8')
-    reader = csv.reader(csv_file, delimiter=";")
     screen.fill((250, 230, 180))
 
     image = load_image("icons/krest.png")
@@ -47,9 +40,8 @@ def inventory():
 
     font = pygame.font.Font(None, 30)
     x, y = 80, 100
-
-    for row in reader:
-        text = row[0] + ": " + row[1]
+    for key, value in inventory.items():
+        text = key + ": " + str(value)
         name = font.render(text, True, (0, 0, 0))
         screen.blit(name, (x, y))
         y += 100
@@ -62,6 +54,3 @@ def inventory():
                     return
         pygame.display.flip()
         clock.tick(FPS)
-
-
-inventory()
