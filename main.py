@@ -420,10 +420,6 @@ class Buyer(NPC):
     def open_shop(self):
         global inventory
         self.shop = list(inventory.keys())
-        if not self.shop:
-            self.shop = ["Ничего"]
-            inventory["Ничего"] = 1
-        self.shop = list(inventory.keys())
         screen2 = pygame.Surface((WIDTH, HEIGHT))
         screen2.fill((250, 230, 180))
         elements = []
@@ -740,7 +736,7 @@ def sea_travel(level_number):
 
         if current_city:
             transfer(current_city)
-            time += enter_city(time)
+            time = enter_city(time)
             current_city = ''
             set_configuration("sea")
             player = generate_sea_map(level)
@@ -814,7 +810,7 @@ def my_reaction():
                 WHERE name = '{current_player}'""").fetchone()[0]
         if level > max_level:
             return
-        con.cursor().execute(f"UPDATE users SET money={5000} "
+        con.cursor().execute(f"UPDATE users SET money={2000} "
                              f"WHERE name='{current_player}'")
         con.commit()
         if sea_travel(level) and level == max_level:

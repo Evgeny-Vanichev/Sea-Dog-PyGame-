@@ -1,6 +1,7 @@
 player;player;0;0
 city1;island;600;600
-labyrynth;island;-600;-600
 city2;island;-600;600
+city3;island;600;600
+labyrynth;island;-600;-600
 p1;pirate;-200;-200
 p2;pirate;-100;-450

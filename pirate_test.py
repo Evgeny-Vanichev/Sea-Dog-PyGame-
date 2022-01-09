@@ -44,11 +44,15 @@ class PirateTest(object):
         thorpy.store(self.e_background, gap=50)
 
     def check(self):
+        ans_user = ''
+        for btn in [self.radioButton1, self.radioButton2,
+                    self.radioButton3, self.radioButton4]:
+            ans_user += '1' if btn.get_value() else '0'
+        right_ans = ''
         q_number = self.numbers[self.count]
-        if (self.radioButton1.get_value() and questions[q_number][1][1]) \
-                or (self.radioButton2.get_value() and questions[q_number][2][1]) \
-                or (self.radioButton3.get_value() and questions[q_number][3][1]) \
-                or (self.radioButton4.get_value() and questions[q_number][4][1]):
+        for ans in questions[q_number][1:]:
+            right_ans += '1' if ans[1] else '0'
+        if ans_user == right_ans:
             self.count += 1
             if self.count >= 5:
                 thorpy.functions.quit_menu_func()
@@ -79,4 +83,3 @@ class PirateTest(object):
         menu = thorpy.Menu(self.e_background)
         menu.play()
         return self.test_passed
-
