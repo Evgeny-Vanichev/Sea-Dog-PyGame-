@@ -16,44 +16,6 @@ SIZE = WIDTH, HEIGHT = 500, 500
 screen = pygame.display.set_mode(SIZE)
 clock = pygame.time.Clock()
 
-
-def start_screen():
-    intro_text = ["ЗАСТАВКА", "",
-                  "Правила игры",
-                  "Если в правилах несколько строк,",
-                  "приходится выводить их построчно"]
-
-    fon = pygame.transform.scale(load_image('fon.jpg'), (WIDTH, HEIGHT))
-    screen.blit(fon, (0, 0))
-    font = pygame.font.Font(None, 30)
-    text_coord = 50
-    for line in intro_text:
-        string_rendered = font.render(line, True, pygame.Color('white'))
-        intro_rect = string_rendered.get_rect()
-        text_coord += 10
-        intro_rect.top = text_coord
-        intro_rect.x = 10
-        text_coord += intro_rect.height
-
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                terminate()
-            elif event.type == pygame.KEYDOWN or \
-                    event.type == pygame.MOUSEBUTTONDOWN:
-                return  # начинаем игру
-        pygame.display.flip()
-        clock.tick(FPS)
-    while True:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                terminate()
-            elif event.type == pygame.KEYDOWN or \
-                    event.type == pygame.MOUSEBUTTONDOWN:
-                return  # начинаем игру
-        pygame.display.flip()
-        clock.tick(FPS)
-
-
 def load_items():
     global current_city, inventory
     with open(f'data/{current_player}/inventory.csv', mode='rt', encoding='utf8') as csvfile:
@@ -614,11 +576,10 @@ def enter_city(city_name):
 
 
 # Загрузка файлов игры
-current_player = 'admin'
+current_player = 'basic_profile'
 money = 0
 current_city = 'city1'
 inventory = dict()
-start_screen()
 load_items()
 
 # группы спрайтов
