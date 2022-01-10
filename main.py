@@ -825,7 +825,6 @@ def sea_travel(level_number):
     player = generate_sea_map(level)
     camera = Camera()
     running = True
-
     inv_btn = load_image("icons/inv_button.png")
     quest_btn = load_image("icons/quest_button.png")
     screen.blit(inv_btn, (400, 5))
