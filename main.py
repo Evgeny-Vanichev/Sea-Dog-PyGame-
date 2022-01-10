@@ -357,7 +357,7 @@ class Merchant(NPC):
         text_inventory = f"Места в инвентаре: {10 - sum(inventory.values())}"  # by Taisia
         text_inventory = thorpy.make_text(text_inventory, font_size=10,
                                           font_color=(0, 0, 0))  # by Taisia
-        text_inventory.set_topleft((25, 5))  # by Taisia
+        text_inventory.set_topleft((25, 15))  # by Taisia
         text_inventory.blit()  # by Taisia
         text_inventory.update()  # by Taisia
 
@@ -794,7 +794,7 @@ def set_configuration(param):
             'chest': load_image('icons/treasure.png'),
             'pirate': load_image('icons/pirate_water.png'),
             'empty': load_image('icons/sea_tile.png'),
-            'island': load_image('icons/road.png')
+            'island': load_image('icons/island.png', colorkey=-1)
         }
         player_image = load_image('icons/ship.png')
 
