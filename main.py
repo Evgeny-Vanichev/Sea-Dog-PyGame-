@@ -881,7 +881,6 @@ def sea_travel(level_number):
                 move_x = move_y = 0
             elif pygame.sprite.spritecollideany(player, pirate_group):
                 test = PirateTest(0)
-                test.launch_game()
                 if not test.launch_game():
                     con = sqlite3.connect("data/login_db.db")
                     con.cursor().execute(
