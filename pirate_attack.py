@@ -14,8 +14,8 @@ def attack():
                              font_color=(240, 105, 80))
     text2 = thorpy.make_text("Пройдите тест, чтобы спастись!", font_size=30,
                              font_color=(240, 105, 80))
-    my_gif = thorpy.AnimatedGif.make("data/pirates.gif", colorkey=None, low=2)
-    background = thorpy.Background.make(image=None, elements=[text1, text2, my_gif])
+    # my_gif = thorpy.AnimatedGif.make("data/pirates.gif", colorkey=None, low=2)
+    background = thorpy.Background.make(image=None, elements=[text1, text2])
     background.set_main_color((145, 205, 255))
     background.add_reaction(my_reaction)
     thorpy.store(background)
@@ -28,8 +28,8 @@ def test_passed():
                              font_color=(240, 105, 80))
     text2 = thorpy.make_text("На этот раз...", font_size=30,
                              font_color=(240, 105, 80))
-    my_gif = thorpy.AnimatedGif.make("data/pirates.gif", colorkey=None, low=2)
-    background = thorpy.Background.make(image=None, elements=[text1, text2, my_gif])
+    # my_gif = thorpy.AnimatedGif.make("data/pirates.gif", colorkey=None, low=2)
+    background = thorpy.Background.make(image=None, elements=[text1, text2])
     background.set_main_color((145, 205, 255))
     background.add_reaction(my_reaction)
     thorpy.store(background)
@@ -44,8 +44,8 @@ def test_failed():
                              font_color=(240, 105, 80))
     text3 = thorpy.make_text("И 10% твоих монет!", font_size=30,
                              font_color=(240, 105, 80))
-    my_gif = thorpy.AnimatedGif.make("data/pirates.gif", colorkey=None, low=2)
-    background = thorpy.Background.make(image=None, elements=[text1, text2, text3, my_gif])
+    #my_gif = thorpy.AnimatedGif.make("data/pirates.gif", colorkey=None, low=2)
+    background = thorpy.Background.make(image=None, elements=[text1, text2, text3])
     background.set_main_color((145, 205, 255))
     background.add_reaction(my_reaction)
     thorpy.store(background)

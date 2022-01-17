@@ -80,6 +80,6 @@ class PirateTest(object):
             thorpy.functions.quit_menu_func()
 
     def launch_game(self):
-        menu = thorpy.Menu(self.e_background)
-        menu.play()
+        game = thorpy.Menu(self.e_background)
+        game.play()
         return self.test_passed
